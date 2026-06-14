@@ -1459,7 +1459,7 @@ ${scoreText}
                 if (resp.ok) {
                     const data = await resp.json();
                     allMatches = parseOpenfootball(data);
-                    info.textContent = `✅ تم التحديث من المصدر الرسمي · ${allMatches.length} مباراة`;
+                    info.textContent = `✅ الموقع محدث`;
                     switchSection('today');
                     renderLiveBar();
                     return;
@@ -1490,7 +1490,7 @@ ${scoreText}
                 });
 
                 const updated = new Date(data.lastUpdated);
-                info.textContent = `📁 ملف محلي · آخر تحديث: ${updated.toLocaleString('ar-SA')} · ${data.total} مباراة`;
+                info.textContent = `✅ الموقع محدث`;
                 switchSection('today');
                 renderLiveBar();
             } catch (err) {
@@ -1501,7 +1501,7 @@ ${scoreText}
                         <br>
                         <button class="retry-btn" onclick="loadData()">إعادة المحاولة</button>
                     </div>`;
-                info.textContent = '⚠️ تعذر تحميل البيانات';
+                info.textContent = '❌ الموقع غير محدث';
             }
         }
 
