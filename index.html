@@ -595,7 +595,7 @@
             html += `</div>`;
             html += `<div style="display:grid;gap:12px;padding:15px;background:#1a2332;border-radius:0 0 10px 10px;">`;
 
-            matches.forEach(m => {
+            matches.forEach((m, idx) => {
                 const statusClass = m.status === 'live' ? 'ongoing' : m.status === 'finished' ? 'finished' : 'upcoming';
                 const statusMap = { live: '⚡ مباشر', finished: '✅ انتهت', coming: '⏳ بعد قليل', upcoming: '🔜 قادمة' };
                 const scoreDisplay = m.score1 !== null && m.score2 !== null ? `${m.score1} - ${m.score2}` : '';
@@ -613,7 +613,7 @@
                         <div style="display:flex;flex-direction:column;gap:6px;align-items:center;min-width:140px;">
                             <span class="status-badge ${statusClass}">${statusMap[m.status] || m.statusText}</span>
                             ${m.channel ? `<span style="color:#90a4ae;font-size:12px;">📡 ${m.channel}</span>` : ''}
-                            <button class="stream-btn" data-index="${i}" style="background:#d32f2f;color:white;padding:6px 20px;border-radius:20px;border:none;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;">▶ مشاهدة</button>
+                            <button class="stream-btn" data-index="${idx}" style="background:#d32f2f;color:white;padding:6px 20px;border-radius:20px;border:none;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;">▶ مشاهدة</button>
                         </div>
                     </div>`;
             });
