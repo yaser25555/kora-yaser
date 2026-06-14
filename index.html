@@ -147,6 +147,54 @@
         }
         .footer a { color: #64b5f6; text-decoration: none; }
 
+        /* Modal overlay for streaming */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-content {
+            width: 100%;
+            max-width: 1100px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #1a2332;
+        }
+        .modal-header .match-title { font-weight: 600; font-size: 16px; }
+        .modal-close {
+            background: #d32f2f;
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-close:hover { background: #b71c1c; }
+        .modal-player {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border: none;
+            display: block;
+        }
         @media (max-width: 768px) {
             .container { padding: 10px; }
             .header h1 { font-size: 20px; }
@@ -191,6 +239,17 @@
 
         <div class="footer">
             تم التطوير بواسطة SNY
+        </div>
+    </div>
+
+    <!-- Streaming Modal -->
+    <div class="modal-overlay" id="streamModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="match-title" id="modalTitle">مشاهدة المباراة</span>
+                <button class="modal-close" onclick="closeStream()">✕</button>
+            </div>
+            <iframe class="modal-player" id="modalPlayer" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
         </div>
     </div>
 
@@ -495,6 +554,8 @@
             }
         }
 
+        let streamsData = [];
+
         async function loadStreams() {
             const content = document.getElementById('content');
             const info = document.getElementById('updateInfo');
@@ -505,6 +566,7 @@
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 const data = await resp.json();
                 const updated = new Date(data.lastUpdated);
+                streamsData = data.matches;
                 info.textContent = `📺 روابط البث · آخر تحديث: ${updated.toLocaleString('ar-SA')} · ${data.total} مباراة`;
                 renderStreams(data.matches);
             } catch (err) {
@@ -551,7 +613,7 @@
                         <div style="display:flex;flex-direction:column;gap:6px;align-items:center;min-width:140px;">
                             <span class="status-badge ${statusClass}">${statusMap[m.status] || m.statusText}</span>
                             ${m.channel ? `<span style="color:#90a4ae;font-size:12px;">📡 ${m.channel}</span>` : ''}
-                            <a href="${m.url}" target="_blank" rel="noopener noreferrer" style="background:#d32f2f;color:white;padding:6px 20px;border-radius:20px;text-decoration:none;font-size:13px;font-weight:bold;display:inline-block;">▶ مشاهدة</a>
+                            <button class="stream-btn" data-index="${i}" style="background:#d32f2f;color:white;padding:6px 20px;border-radius:20px;border:none;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;">▶ مشاهدة</button>
                         </div>
                     </div>`;
             });
@@ -560,6 +622,31 @@
             html += `<div style="text-align:center;color:#555;font-size:12px;margin-top:10px;">المصدر: livehd7sport.com · قد تحتاج لاستخدام VPN لبعض الروابط</div>`;
             content.innerHTML = html;
         }
+
+        function openStream(title, url) {
+            document.getElementById('modalTitle').textContent = '📺 ' + title;
+            document.getElementById('modalPlayer').src = url;
+            document.getElementById('streamModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeStream() {
+            document.getElementById('modalPlayer').src = '';
+            document.getElementById('streamModal').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.stream-btn');
+            if (btn) {
+                const idx = parseInt(btn.dataset.index);
+                const m = streamsData[idx];
+                if (m) openStream(m.team1 + ' vs ' + m.team2, m.url);
+            }
+            if (e.target.closest('#streamModal') && !e.target.closest('.modal-content')) {
+                closeStream();
+            }
+        });
 
         setInterval(updateClock, 1000);
         updateClock();

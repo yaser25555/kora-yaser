@@ -1,7 +1,7 @@
 {
-  "lastUpdated": "2026-06-14T20:21:28.664Z",
+  "lastUpdated": "2026-06-14T20:32:44.643Z",
   "source": "https://www.livehd7sport.com/",
-  "total": 5,
+  "total": 4,
   "matches": [
     {
       "id": 1,
@@ -12,8 +12,8 @@
       "time": "23:00",
       "score1": "0",
       "score2": "0",
-      "status": "coming",
-      "statusText": "بعد قليل",
+      "status": "live",
+      "statusText": "جارية الان",
       "channel": "beIN SPORTS MAX 2",
       "league": "دولي, كأس العالم - المجموعة و",
       "url": "https://tops.poiy.online/investing-in-emerging-markets-identifying-high-growth-opportunitiess/"
@@ -62,21 +62,6 @@
       "channel": "beIN SPORTS MAX 2",
       "league": "دولي, كأس العالم - المجموعة د",
       "url": "https://top.poiy.online/investing-in-emerging-markets-identifying-high-growth-opportunitiess/"
-    },
-    {
-      "id": 9,
-      "team1": "ألمانيا",
-      "team2": "كوراساو",
-      "logo1": "https://www.livehd7sport.com/wp-content/uploads/2026/03/2372.png",
-      "logo2": "https://www.livehd7sport.com/wp-content/uploads/2026/03/24397.png",
-      "time": "20:00",
-      "score1": "0",
-      "score2": "0",
-      "status": "finished",
-      "statusText": "انتهت",
-      "channel": "beIN SPORTS MAX 1",
-      "league": "دولي, كأس العالم - المجموعة ه",
-      "url": "https://tops.poiy.online/investing-in-emerging-markets-identifying-high-growth-opportunitiess/"
     }
   ]
 }
