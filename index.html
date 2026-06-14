@@ -357,6 +357,23 @@
             color: #90a4ae;
             font-size: clamp(10px, 0.8vw, 13px);
         }
+        .share-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #888;
+            width: clamp(26px, 2vw, 34px);
+            height: clamp(26px, 2vw, 34px);
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: clamp(12px, 0.9vw, 16px);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .share-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); color: #fff; }
+
         .stream-btn {
             background: #d32f2f;
             color: white;
@@ -418,6 +435,7 @@
             text-decoration: none;
             color: #fff;
         }
+        .live-bar .live-match { cursor: pointer; }
         .live-bar .live-match:hover { background: rgba(255,255,255,0.25); }
         .live-bar .live-match .flag-sm { font-size: clamp(14px, 1.1vw, 18px); }
         .live-bar .live-match .score-live {
@@ -573,7 +591,7 @@
                 html += `<span class="count">${filtered.length} مباراة</span>`;
                 html += `</div>`;
                 html += `<div class="group-body open"><div class="table-wrap"><table><thead><tr>`;
-                html += `<th>التوقيت</th><th>المجموعة</th><th>المباراة</th><th>النتيجة</th><th>الملعب</th><th>الحالة</th>`;
+                html += `<th>التوقيت</th><th>المجموعة</th><th>المباراة</th><th>النتيجة</th><th>الملعب</th><th>الحالة</th><th style="width:40px;"></th>`;
                 html += `</tr></thead><tbody>`;
 
                 filtered.sort((a, b) => a.timeAst.localeCompare(b.timeAst)).forEach(m => {
@@ -591,6 +609,7 @@
                     html += `</td>`;
                     html += `<td class="stadium-cell">${m.stadium}</td>`;
                     html += `<td><span class="status-badge ${status}">${getStatusText(status)}</span></td>`;
+                    html += `<td><button class="share-btn" onclick="shareMatch(${m.id},this)" title="مشاركة">📤</button></td>`;
                     html += `</tr>`;
                 });
 
@@ -613,6 +632,7 @@
                             <span class="group-badge" style="font-size:11px;background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:10px;">${m.group}</span>
                             <span class="mc-score ${m.score1 !== null ? 'has-score' : ''}">${scoreDisplay}</span>
                             <span class="status-badge ${status}">${statusText}</span>
+                            <button class="share-btn" onclick="shareMatch(${m.id},this)" title="مشاركة">📤</button>
                         </div>
                     </div>`;
                 });
@@ -629,7 +649,7 @@
                     html += `<span class="count">${todayCount > 0 ? '🔴 ' + todayCount + ' اليوم · ' : ''}${matchesInGroup.length} مباريات</span>`;
                     html += `</div>`;
                     html += `<div class="group-body${openDefault ? ' open' : ''}"><div class="table-wrap"><table><thead><tr>`;
-                    html += `<th>التاريخ</th><th>التوقيت (السعودية)</th><th>المباراة</th><th>النتيجة</th><th>الملعب</th><th>الحالة</th>`;
+                    html += `<th>التاريخ</th><th>التوقيت (السعودية)</th><th>المباراة</th><th>النتيجة</th><th>الملعب</th><th>الحالة</th><th style="width:40px;"></th>`;
                     html += `</tr></thead><tbody>`;
 
                     matchesInGroup.forEach(m => {
@@ -648,6 +668,7 @@
                         html += `</td>`;
                         html += `<td class="stadium-cell">${m.stadium}</td>`;
                         html += `<td><span class="status-badge ${status}">${getStatusText(status)}</span></td>`;
+                        html += `<td><button class="share-btn" onclick="shareMatch(${m.id},this)" title="مشاركة">📤</button></td>`;
                         html += `</tr>`;
                     });
 
@@ -677,6 +698,7 @@
                                 <span style="font-size:11px;color:#888;">${m.stadium}</span>
                                 <span class="mc-score ${m.score1 !== null ? 'has-score' : ''}">${scoreDisplay}</span>
                                 <span class="status-badge ${status}">${statusText}</span>
+                                <button class="share-btn" onclick="shareMatch(${m.id},this)" title="مشاركة">📤</button>
                             </div>
                         </div>`;
                     });
@@ -716,6 +738,25 @@
             return flags[team] || '🏳️';
         }
 
+        function shareMatch(id, btn) {
+            const m = allMatches.find(x => x.id === id);
+            if (!m) return;
+            const scoreText = m.score1 !== null ? `📊 ${m.score1} - ${m.score2}` : '';
+            const text = `🏆 كأس العالم 2026
+${m.team1Ar} 🆚 ${m.team2Ar}
+⏰ ${m.date} - ${m.timeAst} ${m.timeLabel}
+${scoreText}
+📍 ${m.stadium}
+🔗 https://kora-yaser.web.app`;
+            if (navigator.share) {
+                navigator.share({ title: 'مباراة كأس العالم', text });
+            } else {
+                navigator.clipboard.writeText(text).then(() => {
+                    if (btn) { btn.textContent = '✅'; setTimeout(() => btn.textContent = '📤', 2000); }
+                }).catch(() => {});
+            }
+        }
+
         function buildFilters() {
             const bar = document.getElementById('filterBar');
             let html = `<button class="filter-btn" data-group="all" onclick="setFilter('all')">الكل</button>`;
@@ -745,7 +786,7 @@
             bar.classList.add('has-live');
             container.innerHTML = live.map(m => {
                 const score = m.score1 !== null ? `${m.score1} - ${m.score2}` : '';
-                return `<span class="live-match">
+                return `<span class="live-match" onclick="setFilter('stream');document.getElementById('liveBar').scrollIntoView({behavior:'smooth'})">
                     <span class="flag-sm">${getFlag(m.team1En)}</span> ${m.team1Ar} ${m.team2Ar} <span class="flag-sm">${getFlag(m.team2En)}</span>
                     ${score ? `<span class="score-live">${score}</span>` : `<span class="score-live">⚽</span>`}
                 </span>`;
