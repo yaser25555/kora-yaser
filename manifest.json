@@ -1,7 +1,7 @@
 {
-  "name": "كأس العالم 2026 - جدول المباريات",
-  "short_name": "كأس العالم 2026",
-  "description": "جدول مباريات كأس العالم 2026 مع النتائج المباشرة والبث المباشر",
+  "name": "YASER-KORA - جدول مباريات كأس العالم",
+  "short_name": "YASER-KORA",
+  "description": "YASER-KORA - جدول مباريات كأس العالم 2026 مع النتائج المباشرة والبث المباشر",
   "start_url": "/",
   "display": "standalone",
   "orientation": "any",
