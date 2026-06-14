@@ -11,38 +11,16 @@ async function scrape() {
     $('.AY_Match').each((i, el) => {
         const team1 = $(el).find('.TM1 .TM_Name').text().trim();
         const team2 = $(el).find('.TM2 .TM_Name').text().trim();
-        const time = $(el).find('.MT_Time').text().trim();
-        const statusText = $(el).find('.MT_Stat').text().trim();
-        const status = statusText.includes('جارية') ? 'live' : 'upcoming';
-        
-        const logo1 = $(el).find('.TM1 img').attr('data-src') || $(el).find('.TM1 img').attr('src');
-        const logo2 = $(el).find('.TM2 img').attr('data-src') || $(el).find('.TM2 img').attr('src');
-        
         const link = $(el).find('a').last().attr('href');
-        const infoItems = $(el).find('.MT_Info li span').map((i, span) => $(span).text().trim()).get();
-        const channel = infoItems[0] || '';
-        const league = infoItems[2] || '';
         
-        matches.push({
-            id: i + 1,
-            team1,
-            team2,
-            logo1,
-            logo2,
-            time,
-            status,
-            statusText,
-            channel,
-            league,
-            url: link
-        });
+        matches.push({ team1, team2, url: link });
     });
     
     console.log(`Found ${matches.length} matches. Extracting streams...`);
     
     for (let m of matches) {
         if (!m.url || m.url === '/') {
-            m.embedUrl = '';
+            m.embedUrl2 = '';
             continue;
         }
         try {
@@ -50,23 +28,36 @@ async function scrape() {
             const pageHtml = await pageRes.text();
             const page$ = cheerio.load(pageHtml);
             const iframe = page$('iframe').first().attr('src');
-            m.embedUrl = iframe || '';
-            console.log(`Extracted stream for ${m.team1} vs ${m.team2}: ${m.embedUrl}`);
+            m.embedUrl2 = iframe || '';
+            console.log(`Extracted kooragoal stream for ${m.team1} vs ${m.team2}: ${m.embedUrl2}`);
         } catch(e) {
-            console.error(`Failed to fetch stream for ${m.url}`);
-            m.embedUrl = '';
+            m.embedUrl2 = '';
         }
     }
     
-    const output = {
-        lastUpdated: new Date().toISOString(),
-        source: "https://www.koora-goal.online/",
-        total: matches.length,
-        matches: matches
-    };
-    
-    fs.writeFileSync('./streams.json', JSON.stringify(output, null, 2));
-    console.log("Successfully saved streams to streams.json!");
+    // Merge with existing streams.json
+    try {
+        const existingData = JSON.parse(fs.readFileSync('./streams.json', 'utf8'));
+        let updatedCount = 0;
+        
+        for (let existing of existingData.matches) {
+            // Find a match by team name similarity
+            const kgMatch = matches.find(m => 
+                (m.team1.includes(existing.team1) || existing.team1.includes(m.team1)) &&
+                (m.team2.includes(existing.team2) || existing.team2.includes(m.team2))
+            );
+            
+            if (kgMatch && kgMatch.embedUrl2) {
+                existing.embedUrl2 = kgMatch.embedUrl2;
+                updatedCount++;
+            }
+        }
+        
+        fs.writeFileSync('./streams.json', JSON.stringify(existingData, null, 2));
+        console.log(`Successfully merged ${updatedCount} backup streams into streams.json!`);
+    } catch(err) {
+        console.error("Could not merge with streams.json:", err.message);
+    }
 }
 
 scrape().catch(console.error);
