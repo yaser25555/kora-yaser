@@ -1555,7 +1555,7 @@ ${scoreText}
             matches.forEach((m, idx) => {
                 const statusClass = m.status === 'live' ? 'ongoing' : m.status === 'finished' ? 'finished' : 'upcoming';
                 const statusMap = { live: '⚡ مباشر', coming: '⏳ بعد قليل', upcoming: '🔜 قادمة' };
-                const scoreDisplay = m.score1 !== null && m.score2 !== null ? `${m.score1} - ${m.score2}` : '';
+                const scoreDisplay = (m.score1 !== undefined && m.score1 !== null && m.score2 !== undefined && m.score2 !== null) ? `${m.score1} - ${m.score2}` : '';
 
                 html += `
                     <div class="stream-card ${m.status === 'live' ? 'live' : ''}">
