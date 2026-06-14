@@ -1518,6 +1518,43 @@ ${scoreText}
                 const data = await resp.json();
                 const updated = new Date(data.lastUpdated);
                 streamsData = data.matches;
+                
+                // Force stale live matches to 'finished' based on time
+                const now = new Date();
+                streamsData.forEach(m => {
+                    if (m.status === 'live' && m.time) {
+                        try {
+                            let h = 0, min = 0;
+                            // Parse "02:00 AM" or "14:00"
+                            if (m.time.toLowerCase().includes('am') || m.time.toLowerCase().includes('pm')) {
+                                const parts = m.time.split(/:|\s/);
+                                h = parseInt(parts[0]);
+                                min = parseInt(parts[1]);
+                                if (m.time.toLowerCase().includes('pm') && h !== 12) h += 12;
+                                if (m.time.toLowerCase().includes('am') && h === 12) h = 0;
+                            } else {
+                                const parts = m.time.split(':');
+                                h = parseInt(parts[0]);
+                                min = parseInt(parts[1]);
+                            }
+                            
+                            const matchDate = new Date();
+                            matchDate.setHours(h, min, 0, 0);
+                            
+                            // If the time parsed is in the future (e.g. 23:00 but now is 01:00 AM), it might be from yesterday.
+                            // We assume streams are either today or yesterday.
+                            if (now < matchDate && (matchDate - now) > 12 * 60 * 60 * 1000) {
+                                matchDate.setDate(matchDate.getDate() - 1);
+                            }
+                            
+                            const diffMinutes = (now - matchDate) / 1000 / 60;
+                            if (diffMinutes >= 180) {
+                                m.status = 'finished';
+                            }
+                        } catch(e) {}
+                    }
+                });
+
                 const liveStreams = data.matches.filter(m => m.status === 'live');
                 if (liveStreams.length > 0) {
                     const liveHtml = liveStreams.map(m => `${m.team1} 🆚 ${m.team2}`).join(' &nbsp;|&nbsp; ');
