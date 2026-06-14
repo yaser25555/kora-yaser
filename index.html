@@ -75,6 +75,14 @@
             display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
             margin-bottom: clamp(14px, 2vw, 28px);
         }
+        @media (max-width: 600px) {
+            .filter-bar {
+                flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start;
+                -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 4px;
+            }
+            .filter-bar::-webkit-scrollbar { display: none; }
+            .filter-btn { flex-shrink: 0; }
+        }
         .filter-btn {
             padding: clamp(5px, 0.6vw, 10px) clamp(10px, 1.2vw, 20px);
             border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
@@ -114,14 +122,13 @@
         }
         .group-body.open { display: block; }
 
-        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-wrap { -webkit-overflow-scrolling: touch; overflow: hidden; }
 
         table {
             width: 100%;
             border-collapse: collapse;
             background: #1a2332;
             overflow: hidden;
-            min-width: 500px;
         }
         th {
             background: rgba(0,0,0,0.3);
@@ -168,6 +175,73 @@
         .time-label { color: #90a4ae; font-size: clamp(10px, 0.8vw, 13px); }
         .stadium-cell { color: #90a4ae; font-size: clamp(11px, 0.9vw, 14px); max-width: clamp(100px, 14vw, 220px); }
         .date-cell { font-size: clamp(11px, 0.9vw, 14px); white-space: nowrap; }
+        .group-badge { font-size: clamp(11px, 0.8vw, 13px); }
+
+        /* Card layout for small screens (replaces table) */
+        .card-grid {
+            display: grid;
+            gap: clamp(6px, 0.8vw, 12px);
+            padding: clamp(8px, 1vw, 16px);
+            background: #1a2332;
+            border-radius: 0 0 10px 10px;
+        }
+        .card-grid .mc {
+            background: #0f1923;
+            border-radius: 8px;
+            padding: clamp(8px, 1vw, 14px);
+            display: flex;
+            align-items: center;
+            gap: clamp(6px, 0.8vw, 12px);
+            flex-wrap: wrap;
+            border-right: 3px solid #FFC107;
+        }
+        .card-grid .mc .mc-teams {
+            flex: 1;
+            min-width: 0;
+            font-weight: 600;
+            font-size: clamp(11px, 1vw, 15px);
+            line-height: 1.6;
+        }
+        .card-grid .mc .mc-info {
+            display: flex;
+            align-items: center;
+            gap: clamp(6px, 0.8vw, 12px);
+            flex-wrap: wrap;
+            font-size: clamp(10px, 0.8vw, 13px);
+            color: #90a4ae;
+        }
+        .card-grid .mc .mc-info .mc-score {
+            font-weight: bold;
+            font-size: clamp(13px, 1.2vw, 18px);
+            color: #4CAF50;
+        }
+        .card-grid .mc .mc-info .mc-time {
+            color: #64b5f6;
+            font-weight: 600;
+        }
+        .card-grid .day-label {
+            text-align: center;
+            color: #888;
+            font-size: clamp(10px, 0.8vw, 13px);
+            padding: 4px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+        }
+        @media (min-width: 601px) {
+            table { display: table; }
+            .card-grid { display: none; }
+        }
+        @media (max-width: 600px) {
+            table { display: none; }
+            .table-wrap { overflow: visible; }
+        }
+        @media (max-width: 600px) and (prefers-reduced-motion: no-preference) {
+            .card-grid .mc { animation: fadeInUp 0.3s ease; }
+            @keyframes fadeInUp {
+                from { opacity: 0; transform: translateY(8px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        }
 
         .footer {
             text-align: center; padding: clamp(20px, 3vw, 35px);
@@ -357,24 +431,14 @@
         }
 
         @media (max-width: 900px) {
-            table { min-width: 450px; }
             .stadium-cell { max-width: 120px; }
             .match-teams .flag { font-size: 14px; }
         }
         @media (max-width: 600px) {
-            table { min-width: 400px; }
-            .stadium-cell { display: none; }
-            .score-cell { min-width: 28px; }
             .modal-player { aspect-ratio: 16/9; max-height: none; }
             .modal-overlay { padding: 0; align-items: flex-end; }
             .modal-content { border-radius: 12px 12px 0 0; max-height: 95vh; }
             .time-bar { flex-direction: row; }
-        }
-        @media (max-width: 400px) {
-            table { min-width: 320px; }
-            .match-teams .flag { font-size: 12px; }
-            .match-teams .vs { margin: 0 2px; }
-            .today-row td:first-child { border-right-width: 2px; }
         }
     </style>
 </head>
@@ -530,7 +594,29 @@
                     html += `</tr>`;
                 });
 
-                html += `</tbody></table></div></div></div>`;
+                html += `</tbody></table></div>`;
+
+                // Card layout for mobile
+                html += `<div class="card-grid">`;
+                filtered.sort((a, b) => a.timeAst.localeCompare(b.timeAst)).forEach(m => {
+                    const status = getStatus(m.score1, m.score2, m.date, m.timeAst);
+                    const statusText = getStatusText(status);
+                    const scoreDisplay = m.score1 !== null ? `${m.score1} - ${m.score2}` : '⚽';
+                    html += `<div class="mc">
+                        <div class="mc-teams">
+                            <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
+                            <span class="vs">vs</span>
+                            ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span>
+                        </div>
+                        <div class="mc-info">
+                            <span class="mc-time">${m.timeAst} ${m.timeLabel}</span>
+                            <span class="group-badge" style="font-size:11px;background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:10px;">${m.group}</span>
+                            <span class="mc-score ${m.score1 !== null ? 'has-score' : ''}">${scoreDisplay}</span>
+                            <span class="status-badge ${status}">${statusText}</span>
+                        </div>
+                    </div>`;
+                });
+                html += `</div></div></div>`;
             } else {
                 const sortedGroups = Object.keys(grouped).sort();
                 sortedGroups.forEach((g, gi) => {
@@ -565,7 +651,36 @@
                         html += `</tr>`;
                     });
 
-                    html += `</tbody></table></div></div></div>`;
+                    html += `</tbody></table></div>`;
+
+                    // Card layout for mobile
+                    html += `<div class="card-grid">`;
+                    // Group date header
+                    let prevDate = '';
+                    matchesInGroup.forEach(m => {
+                        const status = getStatus(m.score1, m.score2, m.date, m.timeAst);
+                        const statusText = getStatusText(status);
+                        const scoreDisplay = m.score1 !== null ? `${m.score1} - ${m.score2}` : '⚽';
+                        const dateStr = formatDate(m.date);
+                        if (dateStr !== prevDate) {
+                            html += `<div class="day-label">${dateStr}</div>`;
+                            prevDate = dateStr;
+                        }
+                        html += `<div class="mc ${isToday(m.date) ? 'today-row' : ''}">
+                            <div class="mc-teams">
+                                <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
+                                <span class="vs">vs</span>
+                                ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span>
+                            </div>
+                            <div class="mc-info">
+                                <span class="mc-time">${m.timeAst} ${m.timeLabel}</span>
+                                <span style="font-size:11px;color:#888;">${m.stadium}</span>
+                                <span class="mc-score ${m.score1 !== null ? 'has-score' : ''}">${scoreDisplay}</span>
+                                <span class="status-badge ${status}">${statusText}</span>
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div></div></div>`;
                 });
             }
 
