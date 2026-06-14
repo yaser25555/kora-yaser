@@ -914,6 +914,17 @@
 
 </head>
 <body>
+    <script>
+    // Force update service worker and clear old caches
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+            regs.forEach(reg => reg.update());
+        });
+        caches.keys().then(keys => {
+            keys.forEach(k => { if (k !== 'worldcup2026-v3') caches.delete(k); });
+        });
+    }
+    </script>
     <div class="container">
 
         <!-- Premium Hero Section with Maradona -->
@@ -1357,27 +1368,33 @@ ${scoreText}
         }
 
         function renderLiveBar() {
-    const bar = document.getElementById('liveBar');
-    const container = document.getElementById('liveMatches');
-    const info = document.getElementById('updateInfo');
-    const live = allMatches.filter(m => getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst) === 'ongoing');
+            const bar = document.getElementById('liveBar');
+            const container = document.getElementById('liveMatches');
+            const info = document.getElementById('updateInfo');
 
-    if (live.length === 0) {
-        bar.classList.remove('has-live');
-        return;
-    }
+            // Always clear updateInfo to prevent any stale banners from old cached code
+            if (info && info.querySelector && info.querySelector('div')) {
+                info.innerHTML = '';
+            }
 
-    bar.classList.add('has-live');
-    // Clear any stale info messages when a live match is present
-    info.innerHTML = '';
-    container.innerHTML = live.map(m => {
-        const score = m.score1 !== null ? `${m.score1} - ${m.score2}` : '';
-        return `<span class="live-match" onclick="switchSection('stream');document.getElementById('liveBar').scrollIntoView({behavior:'smooth'})">
+            const live = allMatches.filter(m => getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst) === 'ongoing');
+
+            if (live.length === 0) {
+                bar.classList.remove('has-live');
+                container.innerHTML = '';
+                return;
+            }
+
+            bar.classList.add('has-live');
+            info.innerHTML = '';
+            container.innerHTML = live.map(m => {
+                const score = m.score1 !== null ? `${m.score1} - ${m.score2}` : '';
+                return `<span class="live-match" onclick="switchSection('stream');document.getElementById('liveBar').scrollIntoView({behavior:'smooth'})">
                     <span class="flag-sm">${getFlag(m.team1En)}</span> ${m.team1Ar} ${m.team2Ar} <span class="flag-sm">${getFlag(m.team2En)}</span>
                     ${score ? `<span class="score-live">${score}</span>` : `<span class="score-live">⚽</span>`}
                 </span>`;
-    }).join('');
-}
+            }).join('');
+        }
 
 
 

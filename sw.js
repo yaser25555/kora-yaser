@@ -1,4 +1,4 @@
-const CACHE_NAME = 'worldcup2026-v2';
+const CACHE_NAME = 'worldcup2026-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -8,7 +8,7 @@ const STATIC_ASSETS = [
   'https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap'
 ];
 
-// Install: cache static assets
+// Install: cache static assets & force activate immediately
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
@@ -18,7 +18,7 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate: DELETE all old caches aggressively
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -30,12 +30,16 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch: Network first for data, Cache first for assets
+// Fetch: Always network-first for HTML and JSON; cache-first only for images/fonts
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Network first for JSON data (matches, streams)
-  if (url.pathname.endsWith('.json') || url.hostname === 'raw.githubusercontent.com') {
+  // ALWAYS network-first for HTML pages and JSON data
+  if (event.request.mode === 'navigate' || 
+      url.pathname.endsWith('.html') || 
+      url.pathname.endsWith('.json') || 
+      url.pathname === '/' ||
+      url.hostname === 'raw.githubusercontent.com') {
     event.respondWith(
       fetch(event.request)
         .then(response => {
@@ -48,12 +52,11 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Cache first for static assets
+  // Cache first for static assets (images, fonts, CSS)
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
-        // Only cache same-origin and fonts
         if (response.ok && (url.origin === self.location.origin || url.hostname.includes('googleapis') || url.hostname.includes('gstatic'))) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
@@ -61,7 +64,6 @@ self.addEventListener('fetch', event => {
         return response;
       });
     }).catch(() => {
-      // Fallback for navigation requests
       if (event.request.mode === 'navigate') {
         return caches.match('/index.html');
       }
