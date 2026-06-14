@@ -1357,24 +1357,29 @@ ${scoreText}
         }
 
         function renderLiveBar() {
-            const bar = document.getElementById('liveBar');
-            const container = document.getElementById('liveMatches');
-            const live = allMatches.filter(m => getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst) === 'ongoing');
+    const bar = document.getElementById('liveBar');
+    const container = document.getElementById('liveMatches');
+    const info = document.getElementById('updateInfo');
+    const live = allMatches.filter(m => getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst) === 'ongoing');
 
-            if (live.length === 0) {
-                bar.classList.remove('has-live');
-                return;
-            }
+    if (live.length === 0) {
+        bar.classList.remove('has-live');
+        return;
+    }
 
-            bar.classList.add('has-live');
-            container.innerHTML = live.map(m => {
-                const score = m.score1 !== null ? `${m.score1} - ${m.score2}` : '';
-                return `<span class="live-match" onclick="switchSection('stream');document.getElementById('liveBar').scrollIntoView({behavior:'smooth'})">
+    bar.classList.add('has-live');
+    // Clear any stale info messages when a live match is present
+    info.innerHTML = '';
+    container.innerHTML = live.map(m => {
+        const score = m.score1 !== null ? `${m.score1} - ${m.score2}` : '';
+        return `<span class="live-match" onclick="switchSection('stream');document.getElementById('liveBar').scrollIntoView({behavior:'smooth'})">
                     <span class="flag-sm">${getFlag(m.team1En)}</span> ${m.team1Ar} ${m.team2Ar} <span class="flag-sm">${getFlag(m.team2En)}</span>
                     ${score ? `<span class="score-live">${score}</span>` : `<span class="score-live">⚽</span>`}
                 </span>`;
-            }).join('');
-        }
+    }).join('');
+}
+
+
 
         const TEAM_NAMES = {
             'Mexico':'المكسيك','South Africa':'جنوب أفريقيا','South Korea':'كوريا الجنوبية',
@@ -1555,14 +1560,8 @@ ${scoreText}
                     }
                 });
 
-                const liveStreams = data.matches.filter(m => m.status === 'live');
-                if (liveStreams.length > 0) {
-                    const liveHtml = liveStreams.map(m => `${m.team1} 🆚 ${m.team2}`).join(' &nbsp;|&nbsp; ');
-                                        info.innerHTML = `<div style="background: linear-gradient(90deg, #d32f2f, #b71c1c); color: white; width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; text-align: center; box-shadow: 0 4px 15px rgba(211,47,47,0.4); animation: pulse 2s infinite;">🔴 جارية الآن: ${liveHtml}</div>`;
-                } else {
-                    info.innerHTML = `<div style="background: rgba(255,193,7,0.1); color: #ffb300; width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; text-align: center; border: 1px solid rgba(255,193,7,0.2);">لا توجد مباريات جارية حالياً (آخر تحديث: ${updated.toLocaleTimeString('ar-SA')})</div>`;
-                }
-                renderStreams(data.matches);
+                info.innerHTML = '';
+                renderStreams(streamsData);
             } catch (err) {
                 content.innerHTML = `
                     <div class="error-msg">
