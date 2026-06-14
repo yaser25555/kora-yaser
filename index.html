@@ -1558,7 +1558,7 @@ ${scoreText}
                 const liveStreams = data.matches.filter(m => m.status === 'live');
                 if (liveStreams.length > 0) {
                     const liveHtml = liveStreams.map(m => `${m.team1} 🆚 ${m.team2}`).join(' &nbsp;|&nbsp; ');
-                                        info.innerHTML = `<div style="background: linear-gradient(90deg, #d32f2f, #b71c1c); color: white; width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; text-align: center; box-shadow: 0 4px 15px rgba(211,47,47,0.4); animation: pulse 2s infinite;">🔴 جارية الآن: هولندا 🆚 اليابان</div>`;
+                                        info.innerHTML = `<div style="background: linear-gradient(90deg, #d32f2f, #b71c1c); color: white; width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 14px; text-align: center; box-shadow: 0 4px 15px rgba(211,47,47,0.4); animation: pulse 2s infinite;">🔴 جارية الآن: ${liveHtml}</div>`;
                 } else {
                     info.innerHTML = `<div style="background: rgba(255,193,7,0.1); color: #ffb300; width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 13px; text-align: center; border: 1px solid rgba(255,193,7,0.2);">لا توجد مباريات جارية حالياً (آخر تحديث: ${updated.toLocaleTimeString('ar-SA')})</div>`;
                 }
