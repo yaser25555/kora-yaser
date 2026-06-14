@@ -1081,7 +1081,8 @@
             const dateParts = (dateAst || date).split('-').map(Number);
             const matchDate = new Date(Date.UTC(dateParts[0], dateParts[1]-1, dateParts[2], h - 3, m));
             const diff = (now - matchDate) / 1000 / 60;
-            if (diff > 0 && diff < 200) return 'ongoing';
+            if (diff >= 180) return 'finished';
+            if (diff > 0) return 'ongoing';
             return 'upcoming';
         }
 
