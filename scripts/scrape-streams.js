@@ -67,16 +67,12 @@ async function scrape() {
     });
   });
 
-  // Filter only World Cup matches
-  const worldCupMatches = matches.filter(m => m.league.includes('كأس العالم'));
+  // Filter only World Cup matches that are live or upcoming
+  const activeMatches = matches.filter(m => m.league.includes('كأس العالم') && m.status !== 'finished');
 
-  // Extract embed URLs only for live/upcoming matches
+  // Extract embed URLs for active matches
   console.log('جلب روابط المشغل المباشر...');
-  for (const m of worldCupMatches) {
-    if (m.status === 'finished') {
-      m.embedUrl = '';
-      continue;
-    }
+  for (const m of activeMatches) {
     try {
       const html = await fetch(m.url);
       const $page = cheerio.load(html);
@@ -98,12 +94,12 @@ async function scrape() {
   const output = {
     lastUpdated: new Date().toISOString(),
     source: SOURCE_URL,
-    total: worldCupMatches.length,
-    matches: worldCupMatches
+    total: activeMatches.length,
+    matches: activeMatches
   };
 
   fs.writeFileSync(OUTPUT, JSON.stringify(output, null, 2), 'utf8');
-  console.log('✓ تم حفظ ' + worldCupMatches.length + ' مباراة من كأس العالم في streams.json');
+  console.log('✓ تم حفظ ' + activeMatches.length + ' مباراة من كأس العالم في streams.json');
 }
 
 scrape().catch(err => {
