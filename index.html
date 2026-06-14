@@ -6,84 +6,105 @@
     <title>كأس العالم 2026 - جدول المباريات</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 16px; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
             background: #0f1923;
             color: #fff;
             min-height: 100vh;
         }
-        .container { max-width: 1300px; margin: 0 auto; padding: 20px; }
+        .container {
+            width: 100%;
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: clamp(10px, 2vw, 30px);
+        }
 
-        /* Header */
         .header {
             text-align: center;
-            padding: 30px 20px;
+            padding: clamp(16px, 3vw, 35px);
             background: linear-gradient(135deg, #1a2a6c, #2c3e50, #1a2a6c);
-            border-radius: 12px;
-            margin-bottom: 25px;
+            border-radius: clamp(8px, 1vw, 14px);
+            margin-bottom: clamp(12px, 2vw, 28px);
         }
-        .header h1 { font-size: 28px; margin-bottom: 5px; }
-        .header p { color: #aaa; font-size: 14px; }
+        .header h1 { font-size: clamp(18px, 3vw, 32px); margin-bottom: 5px; }
+        .header p { color: #aaa; font-size: clamp(11px, 1.3vw, 15px); }
 
         .time-bar {
-            display: flex; justify-content: center; align-items: center; gap: 15px;
+            display: flex; justify-content: center; align-items: center; gap: clamp(6px, 1.2vw, 18px);
+            flex-wrap: wrap;
             background: linear-gradient(135deg, #2196F3, #1976D2);
-            padding: 18px 25px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            font-size: 20px;
+            padding: clamp(10px, 1.8vw, 22px) clamp(12px, 2vw, 28px);
+            border-radius: clamp(8px, 1vw, 14px);
+            margin-bottom: clamp(12px, 2vw, 28px);
+            font-size: clamp(13px, 1.6vw, 22px);
         }
-        .time-bar .time { font-size: 32px; font-weight: bold; }
-        .time-bar .ampm { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 16px; }
-        .time-bar .date { color: rgba(255,255,255,0.8); font-size: 14px; }
-        .time-bar .badge { background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 20px; font-size: 13px; }
+        .time-bar .time { font-size: clamp(20px, 3vw, 36px); font-weight: bold; }
+        .time-bar .ampm { background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; font-size: clamp(11px, 1.2vw, 16px); }
+        .time-bar .date { color: rgba(255,255,255,0.8); font-size: clamp(11px, 1.1vw, 14px); }
+        .time-bar .badge { background: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 20px; font-size: clamp(11px, 1vw, 14px); }
 
         .update-info {
-            text-align: center; color: #888; font-size: 13px; margin-bottom: 20px;
+            text-align: center; color: #888; font-size: clamp(11px, 1vw, 14px); margin-bottom: clamp(12px, 1.8vw, 22px);
+            word-break: break-word;
         }
         .loading {
-            text-align: center; padding: 50px; font-size: 18px; color: #888;
+            text-align: center; padding: clamp(30px, 5vw, 60px); font-size: clamp(14px, 1.5vw, 20px); color: #888;
         }
         .loading .spinner {
             display: inline-block;
-            width: 40px; height: 40px;
+            width: clamp(30px, 3.5vw, 45px); height: clamp(30px, 3.5vw, 45px);
             border: 4px solid #333; border-top-color: #2196F3;
             border-radius: 50%; animation: spin 0.8s linear infinite;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         .error-msg {
-            background: #d32f2f; color: white; padding: 15px; border-radius: 8px;
+            background: #d32f2f; color: white; padding: clamp(12px, 1.5vw, 20px); border-radius: 8px;
             text-align: center; margin-bottom: 20px;
         }
         .retry-btn {
             background: white; color: #d32f2f; border: none; padding: 8px 20px;
-            border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; margin-top: 10px;
+            border-radius: 20px; cursor: pointer; font-size: clamp(12px, 1vw, 15px); font-weight: bold; margin-top: 10px;
         }
         .retry-btn:hover { background: #f5f5f5; }
 
-        .group-section {
-            margin-bottom: 12px;
+        .filter-bar {
+            display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+            margin-bottom: clamp(14px, 2vw, 28px);
         }
+        .filter-btn {
+            padding: clamp(5px, 0.6vw, 10px) clamp(10px, 1.2vw, 20px);
+            border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+            background: transparent; color: #aaa; cursor: pointer;
+            font-size: clamp(11px, 1vw, 14px); font-family: inherit;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.3); }
+        .filter-btn.active { background: #2196F3; color: white; border-color: #2196F3; }
+
+        .group-section { margin-bottom: clamp(6px, 0.8vw, 14px); }
         .group-header {
             background: linear-gradient(135deg, #1a237e, #283593);
-            padding: 12px 18px;
+            padding: clamp(8px, 1vw, 16px) clamp(10px, 1.3vw, 22px);
             border-radius: 10px;
-            font-size: 18px;
+            font-size: clamp(13px, 1.3vw, 20px);
             font-weight: bold;
             display: flex; justify-content: space-between; align-items: center;
+            gap: 8px;
             cursor: pointer;
             user-select: none;
             transition: border-radius 0.2s;
         }
         .group-header.open { border-radius: 10px 10px 0 0; }
-        .group-header .count { color: rgba(255,255,255,0.6); font-size: 13px; }
+        .group-header .count { color: rgba(255,255,255,0.6); font-size: clamp(11px, 0.9vw, 14px); flex-shrink: 0; }
         .group-header .toggle-icon {
-            font-size: 14px;
+            font-size: clamp(11px, 0.9vw, 15px);
             color: rgba(255,255,255,0.5);
             transition: transform 0.2s;
+            flex-shrink: 0;
         }
         .group-header.open .toggle-icon { transform: rotate(90deg); }
         .group-body {
@@ -93,77 +114,47 @@
         }
         .group-body.open { display: block; }
 
-        .table-wrap { overflow-x: auto; }
-
-        @media (max-width: 768px) {
-            .container { padding: 10px; }
-            .header h1 { font-size: 20px; }
-            .header p { font-size: 12px; }
-            .time-bar { flex-wrap: wrap; font-size: 16px; padding: 12px 15px; }
-            .time-bar .time { font-size: 22px; }
-            table { font-size: 11px; }
-            td, th { padding: 8px 5px; white-space: nowrap; }
-            .match-teams { font-size: 12px; min-width: auto; }
-            .match-teams .flag { font-size: 15px; }
-            .match-teams .vs { margin: 0 3px; }
-            .score-cell { font-size: 14px; min-width: 35px; }
-            .stadium-cell { display: none; }
-            .date-cell { font-size: 11px; }
-            .time-ast { font-size: 12px; }
-            .group-header { font-size: 15px; padding: 10px 12px; }
-            .filter-btn { font-size: 12px; padding: 6px 12px; }
-            .modal-content { margin: 10px; }
-            .modal-player { aspect-ratio: 16/9; }
-        }
-        @media (max-width: 480px) {
-            .header h1 { font-size: 17px; }
-            .time-bar .time { font-size: 18px; }
-            table { font-size: 10px; }
-            td, th { padding: 6px 3px; }
-            .match-teams { font-size: 11px; }
-            .score-cell { font-size: 12px; min-width: 28px; }
-            .group-header { font-size: 13px; padding: 8px 10px; }
-            .filter-btn { font-size: 11px; padding: 5px 9px; }
-            .time-bar { font-size: 13px; padding: 10px; flex-direction: column; gap: 5px; }
-        }
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
         table {
             width: 100%;
             border-collapse: collapse;
             background: #1a2332;
             overflow: hidden;
+            min-width: 500px;
         }
         th {
             background: rgba(0,0,0,0.3);
-            padding: 12px 10px;
-            font-size: 13px;
+            padding: clamp(8px, 0.9vw, 14px) clamp(5px, 0.7vw, 12px);
+            font-size: clamp(11px, 0.9vw, 14px);
             color: #90a4ae;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         td {
-            padding: 14px 10px;
+            padding: clamp(8px, 1vw, 16px) clamp(4px, 0.6vw, 12px);
             border-bottom: 1px solid rgba(255,255,255,0.05);
             text-align: center;
-            font-size: 14px;
+            font-size: clamp(11px, 1vw, 15px);
         }
         tr:last-child td { border-bottom: none; }
         tr:hover { background: rgba(255,255,255,0.03); }
 
-        .today-row { background: rgba(255, 193, 7, 0.08) !important; border-left: 3px solid #FFC107; }
+        .today-row { background: rgba(255, 193, 7, 0.08) !important; }
+        .today-row td:first-child { border-right: 3px solid #FFC107; }
         .today-row:hover { background: rgba(255, 193, 7, 0.12) !important; }
 
-        .match-teams { font-weight: 600; font-size: 15px; min-width: 200px; }
-        .match-teams .flag { font-size: 18px; }
-        .match-teams .vs { color: #666; margin: 0 6px; font-size: 12px; }
+        .match-teams { font-weight: 600; font-size: clamp(12px, 1.1vw, 16px); white-space: nowrap; }
+        .match-teams .flag { font-size: clamp(15px, 1.3vw, 20px); }
+        .match-teams .vs { color: #666; margin: 0 4px; font-size: clamp(10px, 0.8vw, 13px); }
 
-        .score-cell { font-weight: bold; font-size: 18px; min-width: 60px; }
+        .score-cell { font-weight: bold; font-size: clamp(14px, 1.3vw, 20px); min-width: clamp(35px, 4vw, 70px); }
         .score-cell.has-score { color: #4CAF50; }
         .score-cell.no-score { color: #555; }
 
         .status-badge {
-            display: inline-block; padding: 4px 12px; border-radius: 20px;
-            font-size: 12px; font-weight: 600; white-space: nowrap;
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: clamp(10px, 0.8vw, 13px); font-weight: 600; white-space: nowrap;
         }
         .status-badge.finished { background: #2e7d32; color: #fff; }
         .status-badge.ongoing { background: #f57f17; color: #fff; animation: pulse 1.5s infinite; }
@@ -173,76 +164,158 @@
             50% { opacity: 0.6; }
         }
 
-        .time-ast { color: #64b5f6; font-weight: 600; }
-        .time-label { color: #90a4ae; font-size: 12px; }
-        .stadium-cell { color: #90a4ae; font-size: 13px; max-width: 200px; }
-
-        .filter-bar {
-            display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
-            margin-bottom: 25px;
-        }
-        .filter-btn {
-            padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
-            background: transparent; color: #aaa; cursor: pointer;
-            font-size: 13px; font-family: inherit;
-            transition: all 0.2s;
-        }
-        .filter-btn:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.3); }
-        .filter-btn.active { background: #2196F3; color: white; border-color: #2196F3; }
+        .time-ast { color: #64b5f6; font-weight: 600; font-size: clamp(12px, 1vw, 15px); }
+        .time-label { color: #90a4ae; font-size: clamp(10px, 0.8vw, 13px); }
+        .stadium-cell { color: #90a4ae; font-size: clamp(11px, 0.9vw, 14px); max-width: clamp(100px, 14vw, 220px); }
+        .date-cell { font-size: clamp(11px, 0.9vw, 14px); white-space: nowrap; }
 
         .footer {
-            text-align: center; padding: 30px 20px;
-            color: #555; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 40px;
+            text-align: center; padding: clamp(20px, 3vw, 35px);
+            color: #555; font-size: clamp(11px, 0.9vw, 14px);
+            border-top: 1px solid rgba(255,255,255,0.05); margin-top: clamp(20px, 3.5vw, 50px);
         }
         .footer a { color: #64b5f6; text-decoration: none; }
 
-        /* Modal overlay for streaming */
         .modal-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.92);
             z-index: 1000;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: clamp(0px, 2vw, 30px);
         }
         .modal-overlay.open { display: flex; }
         .modal-content {
             width: 100%;
             max-width: 1100px;
+            max-height: 100vh;
             background: #000;
-            border-radius: 12px;
+            border-radius: clamp(8px, 0.8vw, 14px);
             overflow: hidden;
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
+            padding: clamp(10px, 1.2vw, 18px);
             background: #1a2332;
+            flex-shrink: 0;
         }
-        .modal-header .match-title { font-weight: 600; font-size: 16px; }
+        .modal-header .match-title { font-weight: 600; font-size: clamp(13px, 1.2vw, 18px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .modal-close {
             background: #d32f2f;
             color: white;
             border: none;
-            width: 36px;
-            height: 36px;
+            width: clamp(30px, 2.5vw, 40px);
+            height: clamp(30px, 2.5vw, 40px);
             border-radius: 50%;
-            font-size: 20px;
+            font-size: clamp(16px, 1.5vw, 22px);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
         .modal-close:hover { background: #b71c1c; }
         .modal-player {
             width: 100%;
             aspect-ratio: 16 / 9;
+            max-height: calc(100vh - 80px);
             border: none;
             display: block;
+            flex-shrink: 0;
+        }
+
+        .stream-grid {
+            display: grid;
+            gap: clamp(8px, 1vw, 16px);
+            padding: clamp(10px, 1.5vw, 20px);
+            background: #1a2332;
+            border-radius: 0 0 10px 10px;
+        }
+        .stream-card {
+            background: #0f1923;
+            border-radius: 10px;
+            padding: clamp(10px, 1.2vw, 18px);
+            display: flex;
+            align-items: center;
+            gap: clamp(8px, 1vw, 16px);
+            flex-wrap: wrap;
+            border-right: 4px solid #1565c0;
+        }
+        .stream-card.live { border-right-color: #f57f17; }
+        .stream-card .team-logo { width: clamp(25px, 2.5vw, 40px); height: clamp(25px, 2.5vw, 40px); object-fit: contain; }
+        .stream-card .team-name {
+            flex: 1;
+            min-width: clamp(60px, 8vw, 130px);
+            font-weight: 600;
+            font-size: clamp(12px, 1.1vw, 16px);
+        }
+        .stream-card .team-name.left { text-align: right; }
+        .stream-card .team-name.right { text-align: left; }
+        .stream-card .score-box {
+            text-align: center;
+            min-width: clamp(35px, 4vw, 60px);
+        }
+        .stream-card .score-box .score {
+            font-size: clamp(16px, 1.8vw, 26px);
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .stream-card .score-box .time {
+            color: #64b5f6;
+            font-weight: 600;
+            font-size: clamp(12px, 1vw, 15px);
+        }
+        .stream-card .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: center;
+            min-width: clamp(100px, 12vw, 160px);
+        }
+        .stream-card .actions .channel {
+            color: #90a4ae;
+            font-size: clamp(10px, 0.8vw, 13px);
+        }
+        .stream-btn {
+            background: #d32f2f;
+            color: white;
+            padding: clamp(5px, 0.5vw, 8px) clamp(14px, 1.5vw, 24px);
+            border-radius: 20px;
+            border: none;
+            font-size: clamp(11px, 0.9vw, 14px);
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .stream-btn:hover { background: #b71c1c; }
+
+        @media (max-width: 900px) {
+            table { min-width: 450px; }
+            .stadium-cell { max-width: 120px; }
+            .match-teams .flag { font-size: 14px; }
+        }
+        @media (max-width: 600px) {
+            table { min-width: 400px; }
+            .stadium-cell { display: none; }
+            .score-cell { min-width: 28px; }
+            .modal-player { aspect-ratio: 16/9; max-height: none; }
+            .modal-overlay { padding: 0; align-items: flex-end; }
+            .modal-content { border-radius: 12px 12px 0 0; max-height: 95vh; }
+            .time-bar { flex-direction: row; }
+        }
+        @media (max-width: 400px) {
+            table { min-width: 320px; }
+            .match-teams .flag { font-size: 12px; }
+            .match-teams .vs { margin: 0 2px; }
+            .today-row td:first-child { border-right-width: 2px; }
         }
     </style>
 </head>
@@ -635,7 +708,7 @@
             html += `<span>📺 روابط مشاهدة المباريات</span>`;
             html += `<span class="count">${matches.length} مباراة</span>`;
             html += `</div>`;
-            html += `<div style="display:grid;gap:12px;padding:15px;background:#1a2332;border-radius:0 0 10px 10px;">`;
+            html += `<div class="stream-grid">`;
 
             matches.forEach((m, idx) => {
                 const statusClass = m.status === 'live' ? 'ongoing' : m.status === 'finished' ? 'finished' : 'upcoming';
@@ -643,25 +716,25 @@
                 const scoreDisplay = m.score1 !== null && m.score2 !== null ? `${m.score1} - ${m.score2}` : '';
 
                 html += `
-                    <div style="background:#0f1923;border-radius:10px;padding:15px;display:flex;align-items:center;gap:15px;flex-wrap:wrap;border-right:4px solid ${m.status === 'live' ? '#f57f17' : '#1565c0'};">
-                        <img src="${m.logo1 || ''}" alt="" style="width:35px;height:35px;object-fit:contain;" onerror="this.style.display='none'">
-                        <div style="flex:1;min-width:120px;font-weight:600;font-size:15px;">${m.team1}</div>
-                        <div style="text-align:center;min-width:50px;">
-                            ${scoreDisplay ? `<div style="font-size:22px;font-weight:bold;color:#4CAF50;">${scoreDisplay}</div>` : ''}
-                            <div style="color:#64b5f6;font-weight:600;font-size:14px;">${m.time || ''}</div>
+                    <div class="stream-card ${m.status === 'live' ? 'live' : ''}">
+                        <img src="${m.logo1 || ''}" alt="" class="team-logo" onerror="this.style.display='none'">
+                        <div class="team-name left">${m.team1}</div>
+                        <div class="score-box">
+                            ${scoreDisplay ? `<div class="score">${scoreDisplay}</div>` : ''}
+                            <div class="time">${m.time || ''}</div>
                         </div>
-                        <div style="flex:1;min-width:120px;font-weight:600;font-size:15px;text-align:left;">${m.team2}</div>
-                        <img src="${m.logo2 || ''}" alt="" style="width:35px;height:35px;object-fit:contain;" onerror="this.style.display='none'">
-                        <div style="display:flex;flex-direction:column;gap:6px;align-items:center;min-width:140px;">
+                        <div class="team-name right">${m.team2}</div>
+                        <img src="${m.logo2 || ''}" alt="" class="team-logo" onerror="this.style.display='none'">
+                        <div class="actions">
                             <span class="status-badge ${statusClass}">${statusMap[m.status] || m.statusText}</span>
-                            ${m.channel ? `<span style="color:#90a4ae;font-size:12px;">📡 ${m.channel}</span>` : ''}
-                            <button class="stream-btn" data-index="${idx}" style="background:#d32f2f;color:white;padding:6px 20px;border-radius:20px;border:none;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;">▶ مشاهدة</button>
+                            ${m.channel ? `<span class="channel">📡 ${m.channel}</span>` : ''}
+                            <button class="stream-btn" data-index="${idx}">▶ مشاهدة</button>
                         </div>
                     </div>`;
             });
 
             html += `</div></div>`;
-            html += `<div style="text-align:center;color:#555;font-size:12px;margin-top:10px;">المصدر: livehd7sport.com · قد تحتاج لاستخدام VPN لبعض الروابط</div>`;
+            html += `<div style="text-align:center;color:#555;font-size:clamp(10px,0.8vw,13px);margin-top:10px;">المصدر: livehd7sport.com · قد تحتاج لاستخدام VPN لبعض الروابط</div>`;
             content.innerHTML = html;
         }
 
