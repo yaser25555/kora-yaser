@@ -599,6 +599,7 @@
                 const statusClass = m.status === 'live' ? 'ongoing' : m.status === 'finished' ? 'finished' : 'upcoming';
                 const statusMap = { live: '⚡ مباشر', finished: '✅ انتهت', coming: '⏳ بعد قليل', upcoming: '🔜 قادمة' };
                 const scoreDisplay = m.score1 !== null && m.score2 !== null ? `${m.score1} - ${m.score2}` : '';
+                const hasStream = m.embedUrl && (m.status === 'live' || m.status === 'coming' || m.status === 'upcoming');
 
                 html += `
                     <div style="background:#0f1923;border-radius:10px;padding:15px;display:flex;align-items:center;gap:15px;flex-wrap:wrap;border-right:4px solid ${m.status === 'live' ? '#f57f17' : m.status === 'finished' ? '#2e7d32' : '#1565c0'};">
@@ -613,7 +614,7 @@
                         <div style="display:flex;flex-direction:column;gap:6px;align-items:center;min-width:140px;">
                             <span class="status-badge ${statusClass}">${statusMap[m.status] || m.statusText}</span>
                             ${m.channel ? `<span style="color:#90a4ae;font-size:12px;">📡 ${m.channel}</span>` : ''}
-                            <button class="stream-btn" data-index="${idx}" style="background:#d32f2f;color:white;padding:6px 20px;border-radius:20px;border:none;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;">▶ مشاهدة</button>
+                            ${hasStream ? `<button class="stream-btn" data-index="${idx}" style="background:#d32f2f;color:white;padding:6px 20px;border-radius:20px;border:none;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;">▶ مشاهدة</button>` : '<span style="color:#555;font-size:12px;">غير متاح</span>'}
                         </div>
                     </div>`;
             });
@@ -641,7 +642,7 @@
             if (btn) {
                 const idx = parseInt(btn.dataset.index);
                 const m = streamsData[idx];
-                if (m) openStream(m.team1 + ' vs ' + m.team2, m.url);
+                if (m) openStream(m.team1 + ' vs ' + m.team2, m.embedUrl || m.url);
             }
             if (e.target.closest('#streamModal') && !e.target.closest('.modal-content')) {
                 closeStream();

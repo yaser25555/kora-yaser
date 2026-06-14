@@ -70,6 +70,31 @@ async function scrape() {
   // Filter only World Cup matches
   const worldCupMatches = matches.filter(m => m.league.includes('كأس العالم'));
 
+  // Extract embed URLs only for live/upcoming matches
+  console.log('جلب روابط المشغل المباشر...');
+  for (const m of worldCupMatches) {
+    if (m.status === 'finished') {
+      m.embedUrl = '';
+      continue;
+    }
+    try {
+      const html = await fetch(m.url);
+      const $page = cheerio.load(html);
+      const iframeSrc = $page('iframe').first().attr('src') || '';
+      m.embedUrl = iframeSrc;
+      if (iframeSrc) {
+        try {
+          const embedHtml = await fetch(iframeSrc);
+          const m3u8Match = embedHtml.match(/['"]?([^'"]+\.m3u8)['"]?/i);
+          if (m3u8Match) m.m3u8 = m3u8Match[1];
+        } catch (e) { /* ignore */ }
+      }
+    } catch (e) {
+      m.embedUrl = '';
+      console.log('  ⚠️ فشل جلب المشغل لـ ' + m.team1 + ' vs ' + m.team2);
+    }
+  }
+
   const output = {
     lastUpdated: new Date().toISOString(),
     source: SOURCE_URL,
