@@ -3,58 +3,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>كأس العالم 2026 - جدول المباريات</title>
+    <title>🏆 كأس العالم 2026 - جدول المباريات المباشر</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+    <!-- Cairo Arabic Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { font-size: 16px; }
+        html { font-size: 16px; scroll-behavior: smooth; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
-            background: #0f1923;
+            font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+            background: radial-gradient(circle at 50% 0%, #152238 0%, #0d121f 100%);
             color: #fff;
             min-height: 100vh;
         }
         .container {
             width: 100%;
-            max-width: 1300px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: clamp(10px, 2vw, 30px);
         }
 
-        .header {
-            text-align: center;
-            padding: clamp(16px, 3vw, 35px);
-            background: linear-gradient(135deg, #1a2a6c, #2c3e50, #1a2a6c);
-            border-radius: clamp(8px, 1vw, 14px);
-            margin-bottom: clamp(12px, 2vw, 28px);
+        /* Hero Banner Redesign */
+        .hero {
+            position: relative;
+            background: radial-gradient(circle at 80% 50%, rgba(25, 118, 210, 0.15) 0%, transparent 60%), #0d121f;
+            border-radius: clamp(12px, 1.5vw, 24px);
+            padding: clamp(20px, 4vw, 50px);
+            margin-bottom: clamp(16px, 2.5vw, 36px);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
         }
-        .header h1 { font-size: clamp(18px, 3vw, 32px); margin-bottom: 5px; }
-        .header p { color: #aaa; font-size: clamp(11px, 1.3vw, 15px); }
+        .hero-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(180deg, transparent 50%, rgba(13, 18, 31, 0.9) 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            display: grid;
+            grid-template-columns: 1.25fr 0.75fr;
+            gap: 24px;
+            align-items: center;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            .hero-media {
+                display: none;
+            }
+        }
+        .hero-title-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .hero-badge {
+            align-self: flex-start;
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            border: 1px solid rgba(255, 193, 7, 0.2);
+            letter-spacing: 0.5px;
+        }
+        @media (max-width: 768px) {
+            .hero-badge {
+                align-self: center;
+            }
+        }
+        .hero-title {
+            font-size: clamp(28px, 4.2vw, 48px);
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 40%, #ffc107 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            line-height: 1.25;
+        }
+        .hero-desc {
+            color: #b0bec5;
+            font-size: clamp(13px, 1.1vw, 17px);
+            font-weight: 400;
+            line-height: 1.6;
+        }
+        .hero-quote {
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: clamp(12px, 0.9vw, 15px);
+            border-right: 3px solid rgba(255, 193, 7, 0.6);
+            padding-right: 12px;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+        .hero-media {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: clamp(180px, 20vw, 320px);
+        }
+        .maradona-img {
+            max-height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%);
+        }
 
+        /* Time Bar */
         .time-bar {
-            display: flex; justify-content: center; align-items: center; gap: clamp(6px, 1.2vw, 18px);
+            display: flex; justify-content: center; align-items: center; gap: clamp(10px, 1.5vw, 20px);
             flex-wrap: wrap;
-            background: linear-gradient(135deg, #2196F3, #1976D2);
-            padding: clamp(10px, 1.8vw, 22px) clamp(12px, 2vw, 28px);
-            border-radius: clamp(8px, 1vw, 14px);
-            margin-bottom: clamp(12px, 2vw, 28px);
-            font-size: clamp(13px, 1.6vw, 22px);
+            background: linear-gradient(135deg, rgba(25, 118, 210, 0.12), rgba(33, 150, 243, 0.04));
+            border: 1px solid rgba(33, 150, 243, 0.15);
+            padding: 14px 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            font-size: clamp(13px, 1.4vw, 18px);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
-        .time-bar .time { font-size: clamp(20px, 3vw, 36px); font-weight: bold; }
-        .time-bar .ampm { background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; font-size: clamp(11px, 1.2vw, 16px); }
-        .time-bar .date { color: rgba(255,255,255,0.8); font-size: clamp(11px, 1.1vw, 14px); }
-        .time-bar .badge { background: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 20px; font-size: clamp(11px, 1vw, 14px); }
+        .time-bar .time { font-size: clamp(20px, 2.5vw, 30px); font-weight: 800; color: #ffc107; text-shadow: 0 0 10px rgba(255, 193, 7, 0.2); }
+        .time-bar .ampm { background: rgba(255,193,7,0.15); color: #ffc107; padding: 3px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1px solid rgba(255,193,7,0.25); }
+        .time-bar .date { color: rgba(255,255,255,0.7); }
+        .time-bar .badge { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; font-size: 13px; }
+
+        /* Live Bar */
+        .live-bar {
+            display: none;
+            background: linear-gradient(135deg, #b71c1c, #d32f2f);
+            border-radius: 16px;
+            padding: clamp(10px, 1.2vw, 18px);
+            margin-bottom: 24px;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            box-shadow: 0 8px 24px rgba(211, 47, 47, 0.25);
+        }
+        .live-bar.has-live { display: flex; }
+        .live-bar .live-dot {
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            animation: live-pulse 1.2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes live-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+        .live-bar .live-label {
+            font-weight: 800;
+            font-size: clamp(13px, 1.2vw, 18px);
+            flex-shrink: 0;
+        }
+        .live-bar .live-matches {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+        .live-bar .live-match {
+            background: rgba(255,255,255,0.15);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: clamp(11px, 1vw, 15px);
+            font-weight: 700;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .live-bar .live-match:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
+        .live-bar .live-match .flag-sm { font-size: 16px; }
+        .live-bar .live-match .score-live {
+            color: #ffd54f;
+            font-weight: 800;
+        }
 
         .update-info {
-            text-align: center; color: #888; font-size: clamp(11px, 1vw, 14px); margin-bottom: clamp(12px, 1.8vw, 22px);
+            text-align: center; color: #888; font-size: clamp(11px, 1vw, 14px); margin-bottom: 20px;
             word-break: break-word;
         }
+
+        /* Modern Dashboard Navigation Tabs */
+        .section-nav {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 8px;
+            border-radius: 50px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(12px);
+        }
+        @media (max-width: 600px) {
+            .section-nav {
+                gap: 6px;
+                padding: 6px;
+            }
+        }
+        .nav-tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            border-radius: 40px;
+            border: none;
+            background: transparent;
+            color: #90a4ae;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+        }
+        .nav-tab svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            transition: transform 0.3s;
+        }
+        .nav-tab:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .nav-tab.active {
+            background: linear-gradient(135deg, #1976D2, #2196F3);
+            color: #fff;
+            box-shadow: 0 8px 16px rgba(25, 118, 210, 0.35);
+        }
+        .nav-tab.active svg {
+            transform: scale(1.1);
+        }
+
+        /* Sub-Navigation for Groups (A to L) */
+        .sub-nav-wrapper {
+            display: none;
+            margin-bottom: 24px;
+            animation: fadeIn 0.3s ease;
+        }
+        .sub-nav-wrapper.show {
+            display: block;
+        }
+        .sub-nav-label {
+            text-align: center;
+            font-size: 13px;
+            color: #607d8b;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .groups-bar {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 4px 8px;
+            scrollbar-width: none;
+            justify-content: center;
+        }
+        .groups-bar::-webkit-scrollbar {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .groups-bar {
+                justify-content: flex-start;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+        .group-btn {
+            background: rgba(255, 255, 255, 0.02);
+            color: #90a4ae;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 8px 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            flex-shrink: 0;
+        }
+        .group-btn:hover, .group-btn.active {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .loading {
-            text-align: center; padding: clamp(30px, 5vw, 60px); font-size: clamp(14px, 1.5vw, 20px); color: #888;
+            text-align: center; padding: 60px; font-size: 18px; color: #888;
         }
         .loading .spinner {
             display: inline-block;
-            width: clamp(30px, 3.5vw, 45px); height: clamp(30px, 3.5vw, 45px);
+            width: 40px; height: 40px;
             border: 4px solid #333; border-top-color: #2196F3;
             border-radius: 50%; animation: spin 0.8s linear infinite;
             margin-bottom: 12px;
@@ -62,63 +323,51 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         .error-msg {
-            background: #d32f2f; color: white; padding: clamp(12px, 1.5vw, 20px); border-radius: 8px;
+            background: #d32f2f; color: white; padding: 20px; border-radius: 12px;
             text-align: center; margin-bottom: 20px;
         }
         .retry-btn {
-            background: white; color: #d32f2f; border: none; padding: 8px 20px;
-            border-radius: 20px; cursor: pointer; font-size: clamp(12px, 1vw, 15px); font-weight: bold; margin-top: 10px;
+            background: white; color: #d32f2f; border: none; padding: 8px 24px;
+            border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; margin-top: 10px;
         }
         .retry-btn:hover { background: #f5f5f5; }
 
-        .filter-bar {
-            display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
-            margin-bottom: clamp(14px, 2vw, 28px);
+        /* Premium Glassmorphic Cards & Tables */
+        .group-section {
+            margin-bottom: 24px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(8px);
         }
-        @media (max-width: 600px) {
-            .filter-bar {
-                flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start;
-                -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 4px;
-            }
-            .filter-bar::-webkit-scrollbar { display: none; }
-            .filter-btn { flex-shrink: 0; }
-        }
-        .filter-btn {
-            padding: clamp(5px, 0.6vw, 10px) clamp(10px, 1.2vw, 20px);
-            border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
-            background: transparent; color: #aaa; cursor: pointer;
-            font-size: clamp(11px, 1vw, 14px); font-family: inherit;
-            transition: all 0.2s;
-        }
-        .filter-btn:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.3); }
-        .filter-btn.active { background: #2196F3; color: white; border-color: #2196F3; }
-
-        .group-section { margin-bottom: clamp(6px, 0.8vw, 14px); }
         .group-header {
-            background: linear-gradient(135deg, #1a237e, #283593);
-            padding: clamp(8px, 1vw, 16px) clamp(10px, 1.3vw, 22px);
-            border-radius: 10px;
-            font-size: clamp(13px, 1.3vw, 20px);
-            font-weight: bold;
+            background: linear-gradient(90deg, rgba(25, 35, 60, 0.7), rgba(15, 25, 45, 0.5));
+            padding: 16px 24px;
+            font-size: clamp(14px, 1.4vw, 18px);
+            font-weight: 700;
             display: flex; justify-content: space-between; align-items: center;
             gap: 8px;
             cursor: pointer;
             user-select: none;
-            transition: border-radius 0.2s;
+            transition: background 0.3s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
         }
-        .group-header.open { border-radius: 10px 10px 0 0; }
-        .group-header .count { color: rgba(255,255,255,0.6); font-size: clamp(11px, 0.9vw, 14px); flex-shrink: 0; }
+        .group-header:hover {
+            background: linear-gradient(90deg, rgba(25, 35, 60, 0.8), rgba(15, 25, 45, 0.6));
+        }
+        .group-header.open { border-radius: 16px 16px 0 0; }
+        .group-header .count { color: #90a4ae; font-size: 13px; font-weight: 600; }
         .group-header .toggle-icon {
-            font-size: clamp(11px, 0.9vw, 15px);
-            color: rgba(255,255,255,0.5);
+            font-size: 14px;
+            color: rgba(255,255,255,0.4);
             transition: transform 0.2s;
-            flex-shrink: 0;
         }
         .group-header.open .toggle-icon { transform: rotate(90deg); }
         .group-body {
             display: none;
             overflow: hidden;
-            border-radius: 0 0 10px 10px;
         }
         .group-body.open { display: block; }
 
@@ -127,105 +376,112 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            background: #1a2332;
-            overflow: hidden;
+            background: transparent;
         }
         th {
-            background: rgba(0,0,0,0.3);
-            padding: clamp(8px, 0.9vw, 14px) clamp(5px, 0.7vw, 12px);
-            font-size: clamp(11px, 0.9vw, 14px);
+            background: rgba(0,0,0,0.25);
+            padding: 14px 16px;
+            font-size: 13px;
             color: #90a4ae;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: 700;
         }
         td {
-            padding: clamp(8px, 1vw, 16px) clamp(4px, 0.6vw, 12px);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
             text-align: center;
-            font-size: clamp(11px, 1vw, 15px);
+            font-size: 14px;
         }
         tr:last-child td { border-bottom: none; }
-        tr:hover { background: rgba(255,255,255,0.03); }
+        tr:hover { background: rgba(255,255,255,0.02); }
 
-        .today-row { background: rgba(255, 193, 7, 0.08) !important; }
+        .today-row { background: rgba(255, 193, 7, 0.04) !important; }
         .today-row td:first-child { border-right: 3px solid #FFC107; }
-        .today-row:hover { background: rgba(255, 193, 7, 0.12) !important; }
+        .today-row:hover { background: rgba(255, 193, 7, 0.07) !important; }
 
-        .match-teams { font-weight: 600; font-size: clamp(12px, 1.1vw, 16px); white-space: nowrap; }
-        .match-teams .flag { font-size: clamp(15px, 1.3vw, 20px); }
-        .match-teams .vs { color: #666; margin: 0 4px; font-size: clamp(10px, 0.8vw, 13px); }
+        .match-teams { font-weight: 700; font-size: 15px; white-space: nowrap; }
+        .match-teams .flag { font-size: 20px; }
+        .match-teams .vs { color: #607d8b; margin: 0 6px; font-size: 12px; font-weight: 400; }
 
-        .score-cell { font-weight: bold; font-size: clamp(14px, 1.3vw, 20px); min-width: clamp(35px, 4vw, 70px); }
+        .score-cell { font-weight: 800; font-size: 18px; min-width: 60px; }
         .score-cell.has-score { color: #4CAF50; }
-        .score-cell.no-score { color: #555; }
+        .score-cell.no-score { color: #455a64; }
 
         .status-badge {
-            display: inline-block; padding: 3px 10px; border-radius: 20px;
-            font-size: clamp(10px, 0.8vw, 13px); font-weight: 600; white-space: nowrap;
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: 700; white-space: nowrap;
         }
-        .status-badge.finished { background: #2e7d32; color: #fff; }
-        .status-badge.ongoing { background: #f57f17; color: #fff; animation: pulse 1.5s infinite; }
-        .status-badge.upcoming { background: #1565c0; color: #fff; }
+        .status-badge.finished { background: rgba(46, 125, 50, 0.15); color: #81c784; border: 1px solid rgba(46, 125, 50, 0.25); }
+        .status-badge.ongoing { background: rgba(245, 127, 23, 0.15); color: #ffb74d; border: 1px solid rgba(245, 127, 23, 0.25); animation: pulse 1.5s infinite; }
+        .status-badge.upcoming { background: rgba(21, 101, 192, 0.15); color: #64b5f6; border: 1px solid rgba(21, 101, 192, 0.25); }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.6; }
         }
 
-        .time-ast { color: #64b5f6; font-weight: 600; font-size: clamp(12px, 1vw, 15px); }
-        .time-label { color: #90a4ae; font-size: clamp(10px, 0.8vw, 13px); }
-        .stadium-cell { color: #90a4ae; font-size: clamp(11px, 0.9vw, 14px); max-width: clamp(100px, 14vw, 220px); }
-        .date-cell { font-size: clamp(11px, 0.9vw, 14px); white-space: nowrap; }
-        .group-badge { font-size: clamp(11px, 0.8vw, 13px); }
+        .time-ast { color: #64b5f6; font-weight: 700; font-size: 14px; }
+        .time-label { color: #90a4ae; font-size: 12px; }
+        .stadium-cell { color: #90a4ae; font-size: 13px; max-width: 200px; }
+        .date-cell { font-size: 13px; white-space: nowrap; color: #b0bec5; }
+        .group-badge { font-size: 12px; background: rgba(255,255,255,0.06); padding: 3px 8px; border-radius: 8px; }
 
-        /* Card layout for small screens (replaces table) */
+        /* Card layout for mobile */
         .card-grid {
             display: grid;
-            gap: clamp(6px, 0.8vw, 12px);
-            padding: clamp(8px, 1vw, 16px);
-            background: #1a2332;
-            border-radius: 0 0 10px 10px;
+            gap: 10px;
+            padding: 16px;
+            background: transparent;
         }
         .card-grid .mc {
-            background: #0f1923;
-            border-radius: 8px;
-            padding: clamp(8px, 1vw, 14px);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 16px;
             display: flex;
             align-items: center;
-            gap: clamp(6px, 0.8vw, 12px);
+            gap: 12px;
             flex-wrap: wrap;
-            border-right: 3px solid #FFC107;
+            border-right: 4px solid #1976D2;
+            transition: all 0.2s;
         }
+        .card-grid .mc:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .card-grid .mc.today-row { border-right-color: #FFC107; background: rgba(255, 193, 7, 0.04); }
         .card-grid .mc .mc-teams {
             flex: 1;
             min-width: 0;
-            font-weight: 600;
-            font-size: clamp(11px, 1vw, 15px);
+            font-weight: 700;
+            font-size: 14px;
             line-height: 1.6;
         }
         .card-grid .mc .mc-info {
             display: flex;
             align-items: center;
-            gap: clamp(6px, 0.8vw, 12px);
+            gap: 12px;
             flex-wrap: wrap;
-            font-size: clamp(10px, 0.8vw, 13px);
+            font-size: 12px;
             color: #90a4ae;
         }
         .card-grid .mc .mc-info .mc-score {
-            font-weight: bold;
-            font-size: clamp(13px, 1.2vw, 18px);
+            font-weight: 800;
+            font-size: 16px;
             color: #4CAF50;
         }
         .card-grid .mc .mc-info .mc-time {
             color: #64b5f6;
-            font-weight: 600;
+            font-weight: 700;
         }
         .card-grid .day-label {
             text-align: center;
-            color: #888;
-            font-size: clamp(10px, 0.8vw, 13px);
-            padding: 4px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 6px;
+            color: #ffc107;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 6px;
+            background: rgba(255,193,7,0.08);
+            border-radius: 8px;
+            margin-top: 10px;
         }
         @media (min-width: 601px) {
             table { display: table; }
@@ -244,12 +500,13 @@
         }
 
         .footer {
-            text-align: center; padding: clamp(20px, 3vw, 35px);
-            color: #555; font-size: clamp(11px, 0.9vw, 14px);
-            border-top: 1px solid rgba(255,255,255,0.05); margin-top: clamp(20px, 3.5vw, 50px);
+            text-align: center; padding: 40px 20px;
+            color: #555; font-size: 13px; font-weight: 600;
+            border-top: 1px solid rgba(255,255,255,0.05); margin-top: 40px;
         }
         .footer a { color: #64b5f6; text-decoration: none; }
 
+        /* Streaming Modal */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -266,36 +523,40 @@
             max-width: 1100px;
             max-height: 100vh;
             background: #000;
-            border-radius: clamp(8px, 0.8vw, 14px);
+            border-radius: 16px;
             overflow: hidden;
             position: relative;
             display: flex;
             flex-direction: column;
+            border: 1px solid rgba(255,255,255,0.1);
         }
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: clamp(10px, 1.2vw, 18px);
-            background: #1a2332;
+            padding: 16px;
+            background: #121824;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
             flex-shrink: 0;
         }
-        .modal-header .match-title { font-weight: 600; font-size: clamp(13px, 1.2vw, 18px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .modal-header .match-title { font-weight: 700; font-size: 16px; }
         .modal-close {
             background: #d32f2f;
             color: white;
             border: none;
-            width: clamp(30px, 2.5vw, 40px);
-            height: clamp(30px, 2.5vw, 40px);
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            font-size: clamp(16px, 1.5vw, 22px);
+            font-size: 18px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(211,47,47,0.3);
+            transition: all 0.2s;
         }
-        .modal-close:hover { background: #b71c1c; }
+        .modal-close:hover { background: #b71c1c; transform: scale(1.05); }
         .modal-player {
             width: 100%;
             aspect-ratio: 16 / 9;
@@ -305,157 +566,109 @@
             flex-shrink: 0;
         }
 
+        /* Stream Cards Redesign */
         .stream-grid {
             display: grid;
-            gap: clamp(8px, 1vw, 16px);
-            padding: clamp(10px, 1.5vw, 20px);
-            background: #1a2332;
-            border-radius: 0 0 10px 10px;
+            gap: 16px;
+            padding: 16px;
+            background: transparent;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         }
         .stream-card {
-            background: #0f1923;
-            border-radius: 10px;
-            padding: clamp(10px, 1.2vw, 18px);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
             display: flex;
             align-items: center;
-            gap: clamp(8px, 1vw, 16px);
+            gap: 16px;
             flex-wrap: wrap;
-            border-right: 4px solid #1565c0;
+            border-top: 4px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
-        .stream-card.live { border-right-color: #f57f17; }
-        .stream-card .team-logo { width: clamp(25px, 2.5vw, 40px); height: clamp(25px, 2.5vw, 40px); object-fit: contain; }
+        .stream-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            background: rgba(255,255,255,0.04);
+        }
+        .stream-card.live {
+            border-top-color: #f57f17;
+            box-shadow: 0 10px 30px rgba(245, 127, 23, 0.1);
+        }
+        .stream-card .team-logo { width: 42px; height: 42px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); }
         .stream-card .team-name {
             flex: 1;
-            min-width: clamp(60px, 8vw, 130px);
-            font-weight: 600;
-            font-size: clamp(12px, 1.1vw, 16px);
+            min-width: 100px;
+            font-weight: 700;
+            font-size: 15px;
         }
         .stream-card .team-name.left { text-align: right; }
         .stream-card .team-name.right { text-align: left; }
         .stream-card .score-box {
             text-align: center;
-            min-width: clamp(35px, 4vw, 60px);
+            min-width: 50px;
         }
         .stream-card .score-box .score {
-            font-size: clamp(16px, 1.8vw, 26px);
-            font-weight: bold;
+            font-size: 24px;
+            font-weight: 800;
             color: #4CAF50;
         }
         .stream-card .score-box .time {
             color: #64b5f6;
-            font-weight: 600;
-            font-size: clamp(12px, 1vw, 15px);
+            font-weight: 700;
+            font-size: 13px;
         }
         .stream-card .actions {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 6px;
             align-items: center;
-            min-width: clamp(100px, 12vw, 160px);
+            min-width: 130px;
+            margin-right: auto;
         }
         .stream-card .actions .channel {
             color: #90a4ae;
-            font-size: clamp(10px, 0.8vw, 13px);
+            font-size: 12px;
+            font-weight: 600;
         }
         .share-btn {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.15);
-            color: #888;
-            width: clamp(26px, 2vw, 34px);
-            height: clamp(26px, 2vw, 34px);
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #90a4ae;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             cursor: pointer;
-            font-size: clamp(12px, 0.9vw, 16px);
+            font-size: 14px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
             flex-shrink: 0;
         }
-        .share-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); color: #fff; }
+        .share-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); color: #fff; transform: scale(1.05); }
 
         .stream-btn {
-            background: #d32f2f;
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
             color: white;
-            padding: clamp(5px, 0.5vw, 8px) clamp(14px, 1.5vw, 24px);
+            padding: 8px 20px;
             border-radius: 20px;
             border: none;
-            font-size: clamp(11px, 0.9vw, 14px);
-            font-weight: bold;
+            font-size: 13px;
+            font-weight: 700;
             cursor: pointer;
             font-family: inherit;
             white-space: nowrap;
+            box-shadow: 0 4px 10px rgba(211,47,47,0.35);
+            transition: all 0.2s;
         }
-        .stream-btn:hover { background: #b71c1c; }
+        .stream-btn:hover { background: linear-gradient(135deg, #e53935, #c62828); transform: scale(1.05); box-shadow: 0 6px 14px rgba(211,47,47,0.5); }
 
-        .live-bar {
-            display: none;
-            background: linear-gradient(135deg, #b71c1c, #d32f2f);
-            border-radius: clamp(8px, 1vw, 14px);
-            padding: clamp(10px, 1.2vw, 18px);
-            margin-bottom: clamp(10px, 1.5vw, 22px);
-            align-items: center;
-            gap: clamp(8px, 1vw, 16px);
-            flex-wrap: wrap;
-        }
-        .live-bar.has-live { display: flex; }
-        .live-bar .live-dot {
-            width: clamp(10px, 0.8vw, 14px);
-            height: clamp(10px, 0.8vw, 14px);
-            background: #fff;
-            border-radius: 50%;
-            animation: live-pulse 1.2s ease-in-out infinite;
-            flex-shrink: 0;
-        }
-        @keyframes live-pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.8); }
-        }
-        .live-bar .live-label {
-            font-weight: bold;
-            font-size: clamp(13px, 1.2vw, 18px);
-            flex-shrink: 0;
-        }
-        .live-bar .live-matches {
-            display: flex;
-            gap: clamp(6px, 0.8vw, 12px);
-            flex-wrap: wrap;
-            flex: 1;
-        }
-        .live-bar .live-match {
-            background: rgba(255,255,255,0.15);
-            padding: clamp(4px, 0.4vw, 8px) clamp(8px, 0.9vw, 16px);
-            border-radius: 20px;
-            font-size: clamp(11px, 1vw, 15px);
-            font-weight: 600;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-            color: #fff;
-        }
-        .live-bar .live-match { cursor: pointer; }
-        .live-bar .live-match:hover { background: rgba(255,255,255,0.25); }
-        .live-bar .live-match .flag-sm { font-size: clamp(14px, 1.1vw, 18px); }
-        .live-bar .live-match .score-live {
-            color: #ffd54f;
-            font-weight: bold;
-        }
-        @media (max-width: 600px) {
-            .live-bar { flex-direction: column; align-items: stretch; }
-            .live-bar .live-label { text-align: center; }
-            .live-bar .live-matches { justify-content: center; }
-        }
-
-        @media (max-width: 900px) {
-            .stadium-cell { max-width: 120px; }
-            .match-teams .flag { font-size: 14px; }
-        }
         @media (max-width: 600px) {
             .modal-player { aspect-ratio: 16/9; max-height: none; }
             .modal-overlay { padding: 0; align-items: flex-end; }
-            .modal-content { border-radius: 12px 12px 0 0; max-height: 95vh; }
+            .modal-content { border-radius: 16px 16px 0 0; max-height: 95vh; }
             .time-bar { flex-direction: row; }
         }
     </style>
@@ -463,9 +676,20 @@
 <body>
     <div class="container">
 
-        <div class="header">
-            <h1>🏆 كأس العالم 2026</h1>
-            <p>جميع المباريات · 48 منتخبًا · 3 دول مستضيفة · بتوقيت السعودية</p>
+        <!-- Premium Hero Section with Maradona -->
+        <div class="hero">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-title-group">
+                    <span class="hero-badge">🏆 كأس العالم 2026</span>
+                    <h1 class="hero-title">تغطية مونديال 2026</h1>
+                    <p class="hero-desc">جدول مباريات كأس العالم بكامل تفاصيله ونتائجه المباشرة، مع روابط البث المباشر لأقوى اللقاءات.</p>
+                    <p class="hero-quote">"أنا دييغو.. وسأظل دائماً دييغو الفتى الذي يعشق كرة القدم." - مارادونا</p>
+                </div>
+                <div class="hero-media">
+                    <img src="./maradona.png" alt="دييغو مارادونا" class="maradona-img">
+                </div>
+            </div>
         </div>
 
         <div class="time-bar" id="timeBar">
@@ -484,7 +708,29 @@
 
         <div class="update-info" id="updateInfo">جارٍ تحميل بيانات المباريات...</div>
 
-        <div class="filter-bar" id="filterBar"></div>
+        <!-- Modern Section Navigation -->
+        <div class="section-nav">
+            <button class="nav-tab active" id="tab-today" onclick="switchSection('today')">
+                <svg viewBox="0 0 24 24"><path d="M19,4H18V2H16V4H8V2H6V4H5C3.89,4 3,4.9 3,6V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V6A2,2 0 0,0 19,4M19,19H5V9H19V19M19,7H5V6H19V7M12,11A2,2 0 0,0 10,13A2,2 0 0,0 12,15A2,2 0 0,0 14,13A2,2 0 0,0 12,11Z"/></svg>
+                <span>مباريات اليوم</span>
+            </button>
+            <button class="nav-tab" id="tab-groups" onclick="switchSection('groups')">
+                <svg viewBox="0 0 24 24"><path d="M3,5H21V7H3V5M3,11H21V13H3V11M3,17H21V19H3V17Z"/></svg>
+                <span>جدول المجموعات</span>
+            </button>
+            <button class="nav-tab" id="tab-stream" onclick="switchSection('stream')">
+                <svg viewBox="0 0 24 24"><path d="M21,3H3C1.89,3 1,3.89 1,5V17C1,18.11 1.89,19 3,19H8V21H16V19H21C22.11,19 23,18.11 23,17V5C23,3.89 22.11,3 21,3M21,17H3V5H21V17M16,11L9,15V7L16,11Z"/></svg>
+                <span>البث المباشر</span>
+            </button>
+        </div>
+
+        <!-- Sub-Navigation for Groups (A to L) -->
+        <div class="sub-nav-wrapper" id="groupsSubNav">
+            <div class="sub-nav-label">اختر المجموعة لعرض جدولها</div>
+            <div class="groups-bar" id="groupsBar">
+                <!-- Group buttons generated dynamically -->
+            </div>
+        </div>
 
         <div id="content">
             <div class="loading">
@@ -805,15 +1051,49 @@ ${scoreText}
             }
         }
 
-        function buildFilters() {
-            const bar = document.getElementById('filterBar');
-            let html = `<button class="filter-btn" data-group="all" onclick="setFilter('all')">الكل</button>`;
-            html += `<button class="filter-btn active" data-group="today" onclick="setFilter('today')">📅 مباريات اليوم</button>`;
-            html += `<button class="filter-btn" data-group="stream" onclick="setFilter('stream')">📺 مشاهدة</button>`;
+        let activeSection = 'today';
+        let activeGroupFilter = 'all';
+
+        function switchSection(section) {
+            activeSection = section;
+            
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            const tab = document.getElementById('tab-' + section);
+            if (tab) tab.classList.add('active');
+
+            const subNav = document.getElementById('groupsSubNav');
+            if (section === 'groups') {
+                subNav.classList.add('show');
+                buildGroupButtons();
+                setGroupFilter(activeGroupFilter);
+            } else {
+                subNav.classList.remove('show');
+                if (section === 'today') {
+                    renderMatches(allMatches, 'today');
+                } else if (section === 'stream') {
+                    loadStreams();
+                }
+            }
+        }
+
+        function buildGroupButtons() {
+            const bar = document.getElementById('groupsBar');
+            if (!bar) return;
+            let html = `<button class="group-btn${activeGroupFilter === 'all' ? ' active' : ''}" onclick="setGroupFilter('all')">الكل</button>`;
             GROUPS.forEach(g => {
-                html += `<button class="filter-btn" data-group="${g}" onclick="setFilter('${g}')">${g}</button>`;
+                const active = activeGroupFilter === g ? ' active' : '';
+                html += `<button class="group-btn${active}" onclick="setGroupFilter('${g}')">${g}</button>`;
             });
             bar.innerHTML = html;
+        }
+
+        function setGroupFilter(group) {
+            activeGroupFilter = group;
+            document.querySelectorAll('.group-btn').forEach(btn => {
+                const isMatch = btn.textContent === group || (group === 'all' && btn.textContent === 'الكل');
+                btn.classList.toggle('active', isMatch);
+            });
+            renderMatches(allMatches, group);
         }
 
         function toggleGroup(el) {
@@ -824,7 +1104,7 @@ ${scoreText}
         function renderLiveBar() {
             const bar = document.getElementById('liveBar');
             const container = document.getElementById('liveMatches');
-            const live = allMatches.filter(m => getStatus(m.score1, m.score2, m.date, m.timeAst) === 'ongoing');
+            const live = allMatches.filter(m => getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst) === 'ongoing');
 
             if (live.length === 0) {
                 bar.classList.remove('has-live');
@@ -834,23 +1114,11 @@ ${scoreText}
             bar.classList.add('has-live');
             container.innerHTML = live.map(m => {
                 const score = m.score1 !== null ? `${m.score1} - ${m.score2}` : '';
-                return `<span class="live-match" onclick="setFilter('stream');document.getElementById('liveBar').scrollIntoView({behavior:'smooth'})">
+                return `<span class="live-match" onclick="switchSection('stream');document.getElementById('liveBar').scrollIntoView({behavior:'smooth'})">
                     <span class="flag-sm">${getFlag(m.team1En)}</span> ${m.team1Ar} ${m.team2Ar} <span class="flag-sm">${getFlag(m.team2En)}</span>
                     ${score ? `<span class="score-live">${score}</span>` : `<span class="score-live">⚽</span>`}
                 </span>`;
             }).join('');
-        }
-
-        function setFilter(group) {
-            activeFilter = group;
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.group === group);
-            });
-            if (group === 'stream') {
-                loadStreams();
-            } else {
-                renderMatches(allMatches, group);
-            }
         }
 
         const TEAM_NAMES = {
@@ -937,8 +1205,7 @@ ${scoreText}
                     const data = await resp.json();
                     allMatches = parseOpenfootball(data);
                     info.textContent = `✅ تم التحديث من المصدر الرسمي · ${allMatches.length} مباراة`;
-                    buildFilters();
-                    setFilter('today');
+                    switchSection('today');
                     renderLiveBar();
                     return;
                 }
@@ -969,8 +1236,7 @@ ${scoreText}
 
                 const updated = new Date(data.lastUpdated);
                 info.textContent = `📁 ملف محلي · آخر تحديث: ${updated.toLocaleString('ar-SA')} · ${data.total} مباراة`;
-                buildFilters();
-                setFilter('today');
+                switchSection('today');
                 renderLiveBar();
             } catch (err) {
                 console.error(err);
