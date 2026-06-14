@@ -1,0 +1,33 @@
+{
+  "name": "كأس العالم 2026 - جدول المباريات",
+  "short_name": "كأس العالم 2026",
+  "description": "جدول مباريات كأس العالم 2026 مع النتائج المباشرة والبث المباشر",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d121f",
+  "theme_color": "#0d121f",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["sports", "entertainment"],
+  "screenshots": []
+}
