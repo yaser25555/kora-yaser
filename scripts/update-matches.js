@@ -21,16 +21,23 @@ function parseUtcOffset(timeStr) {
   return match ? parseInt(match[1]) : 0;
 }
 
-function convertToAst(timeStr) {
-  if (!timeStr) return { time: '--:--', label: '--' };
+function convertToAst(timeStr, dateStr) {
+  if (!timeStr) return { time: '--:--', label: '--', date: dateStr };
   const [timePart, offsetPart] = timeStr.split(' UTC');
   const [hours, minutes] = timePart.split(':').map(Number);
   const offset = offsetPart ? parseInt(offsetPart) : 0;
   const astOffset = 3;
   let astHours = hours - offset + astOffset;
+  let dayOffset = 0;
   let astMinutes = minutes || 0;
-  if (astHours >= 24) { astHours -= 24; }
-  if (astHours < 0) { astHours += 24; }
+  if (astHours >= 24) { astHours -= 24; dayOffset = 1; }
+  if (astHours < 0) { astHours += 24; dayOffset = -1; }
+  let astDate = dateStr;
+  if (dayOffset !== 0 && dateStr) {
+    const dp = dateStr.split('-').map(Number);
+    const d = new Date(dp[0], dp[1]-1, dp[2] + dayOffset);
+    astDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
   const h = astHours.toString().padStart(2, '0');
   const m = astMinutes.toString().padStart(2, '0');
   let label = '';
@@ -40,7 +47,7 @@ function convertToAst(timeStr) {
   else if (astHours >= 13 && astHours < 17) label = 'بعد الظهر';
   else if (astHours >= 17 && astHours < 21) label = 'مساءً';
   else label = 'ليلاً';
-  return { time: `${h}:${m}`, label };
+  return { time: `${h}:${m}`, label, date: astDate };
 }
 
 function getStatus(match) {
@@ -60,12 +67,13 @@ async function main() {
   const matches = data.matches
     .filter(m => m.team1 && m.team2 && !m.team1.startsWith('W') && !m.team1.startsWith('L'))
     .map((m, i) => {
-      const ast = convertToAst(m.time);
+      const ast = convertToAst(m.time, m.date);
       const status = getStatus(m);
       const score = m.score && m.score.ft ? m.score.ft : null;
       return {
         id: i + 1,
         date: m.date,
+        dateAst: ast.date,
         timeAst: ast.time,
         timeLabel: ast.label,
         team1Ar: teams[m.team1] || m.team1,

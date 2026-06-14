@@ -520,28 +520,70 @@
         let allMatches = [];
         let activeFilter = 'today';
 
+        function getSaudiTodayStr() {
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Riyadh',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric'
+            });
+            const parts = formatter.formatToParts(now);
+            const p = {};
+            parts.forEach(part => {
+                p[part.type] = part.value;
+            });
+            return p.year + '-' + String(p.month).padStart(2, '0') + '-' + String(p.day).padStart(2, '0');
+        }
+
         function updateClock() {
             const now = new Date();
-            let h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Riyadh',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric',
+                second: 'numeric',
+                hour12: false
+            });
+            const parts = formatter.formatToParts(now);
+            const p = {};
+            parts.forEach(part => {
+                p[part.type] = part.value;
+            });
+
+            const h = parseInt(p.hour);
+            const m = parseInt(p.minute);
+            const s = parseInt(p.second);
+            const year = parseInt(p.year);
+            const month = parseInt(p.month);
+            const day = parseInt(p.day);
+
             const ampm = h >= 12 ? 'مساءً' : 'صباحًا';
             const h12 = h % 12 || 12;
             document.getElementById('saudiTime').textContent =
                 String(h12).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
             document.getElementById('amPm').textContent = ampm;
 
-            const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+            const dayFormatter = new Intl.DateTimeFormat('ar-SA', {
+                timeZone: 'Asia/Riyadh',
+                weekday: 'long'
+            });
+            const weekdayName = dayFormatter.format(now);
+
             const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
             document.getElementById('saudiDate').textContent =
-                days[now.getDay()] + '، ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+                weekdayName + '، ' + day + ' ' + months[month - 1] + ' ' + year;
         }
 
-        function getStatus(score1, score2, date, timeAst) {
+        function getStatus(score1, score2, date, timeAst, dateAst) {
             if (score1 !== null) return 'finished';
             const now = new Date();
             const [h, m] = timeAst.split(':').map(Number);
-            const today = new Date();
-            const dateParts = date.split('-').map(Number);
-            const matchDate = new Date(dateParts[0], dateParts[1]-1, dateParts[2], h, m);
+            const dateParts = (dateAst || date).split('-').map(Number);
+            const matchDate = new Date(Date.UTC(dateParts[0], dateParts[1]-1, dateParts[2], h - 3, m));
             const diff = (now - matchDate) / 1000 / 60;
             if (diff > 0 && diff < 200) return 'ongoing';
             return 'upcoming';
@@ -552,20 +594,22 @@
             return map[status] || status;
         }
 
-        function isToday(dateStr) {
-            const now = new Date();
-            const d = new Date(dateStr);
-            return d.getFullYear() === now.getFullYear() &&
-                   d.getMonth() === now.getMonth() &&
-                   d.getDate() === now.getDate();
+        function to12h(time24) {
+            if (!time24) return '';
+            const [h, m] = time24.split(':').map(Number);
+            const pm = h >= 12;
+            const h12 = h % 12 || 12;
+            return String(h12).padStart(2,'0') + ':' + String(m).padStart(2,'0') + (pm ? ' م' : ' ص');
+        }
+
+        function isToday(m) {
+            const dateStr = m.dateAst || m.date;
+            return dateStr === getSaudiTodayStr();
         }
 
         function todayMatches(matches) {
-            const today = new Date();
-            const todayStr = today.getFullYear() + '-' +
-                String(today.getMonth() + 1).padStart(2, '0') + '-' +
-                String(today.getDate()).padStart(2, '0');
-            return matches.filter(m => m.date === todayStr);
+            const todayStr = getSaudiTodayStr();
+            return matches.filter(m => (m.dateAst || m.date) === todayStr);
         }
 
         function renderMatches(matches, activeGroup) {
@@ -587,7 +631,7 @@
             if (activeGroup === 'today') {
                 html += `<div class="group-section">`;
                 html += `<div class="group-header open">`;
-                html += `<span>📅 مباريات اليوم (${formatDate(new Date().toISOString().slice(0,10))})</span>`;
+                html += `<span>📅 مباريات اليوم (${formatDate(getSaudiTodayStr())})</span>`;
                 html += `<span class="count">${filtered.length} مباراة</span>`;
                 html += `</div>`;
                 html += `<div class="group-body open"><div class="table-wrap"><table><thead><tr>`;
@@ -595,7 +639,7 @@
                 html += `</tr></thead><tbody>`;
 
                 filtered.sort((a, b) => a.timeAst.localeCompare(b.timeAst)).forEach(m => {
-                    const status = getStatus(m.score1, m.score2, m.date, m.timeAst);
+                    const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
                     html += `<tr class="today-row">`;
                     html += `<td><span class="time-ast">${m.timeAst}</span><br><span class="time-label">${m.timeLabel}</span></td>`;
                     html += `<td><span class="group-badge">${m.group}</span></td>`;
@@ -618,7 +662,7 @@
                 // Card layout for mobile
                 html += `<div class="card-grid">`;
                 filtered.sort((a, b) => a.timeAst.localeCompare(b.timeAst)).forEach(m => {
-                    const status = getStatus(m.score1, m.score2, m.date, m.timeAst);
+                    const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
                     const statusText = getStatusText(status);
                     const scoreDisplay = m.score1 !== null ? `${m.score1} - ${m.score2}` : '⚽';
                     html += `<div class="mc">
@@ -641,7 +685,7 @@
                 const sortedGroups = Object.keys(grouped).sort();
                 sortedGroups.forEach((g, gi) => {
                     const matchesInGroup = grouped[g];
-                    const todayCount = matchesInGroup.filter(m => isToday(m.date)).length;
+                    const todayCount = matchesInGroup.filter(m => isToday(m)).length;
                     const openDefault = activeGroup !== 'all' || todayCount > 0;
                     html += `<div class="group-section">`;
                     html += `<div class="group-header${openDefault ? ' open' : ''}" onclick="toggleGroup(this)">`;
@@ -653,10 +697,10 @@
                     html += `</tr></thead><tbody>`;
 
                     matchesInGroup.forEach(m => {
-                        const status = getStatus(m.score1, m.score2, m.date, m.timeAst);
-                        const isTodayMatch = isToday(m.date);
+                        const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
+                        const isTodayMatch = isToday(m);
                         html += `<tr class="${isTodayMatch ? 'today-row' : ''}">`;
-                        html += `<td class="date-cell">${formatDate(m.date)}</td>`;
+                        html += `<td class="date-cell">${formatDate(m.dateAst || m.date)}</td>`;
                         html += `<td><span class="time-ast">${m.timeAst}</span><br><span class="time-label">${m.timeLabel}</span></td>`;
                         html += `<td class="match-teams">
                             <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
@@ -679,15 +723,15 @@
                     // Group date header
                     let prevDate = '';
                     matchesInGroup.forEach(m => {
-                        const status = getStatus(m.score1, m.score2, m.date, m.timeAst);
+                        const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
                         const statusText = getStatusText(status);
                         const scoreDisplay = m.score1 !== null ? `${m.score1} - ${m.score2}` : '⚽';
-                        const dateStr = formatDate(m.date);
+                        const dateStr = formatDate(m.dateAst || m.date);
                         if (dateStr !== prevDate) {
                             html += `<div class="day-label">${dateStr}</div>`;
                             prevDate = dateStr;
                         }
-                        html += `<div class="mc ${isToday(m.date) ? 'today-row' : ''}">
+                        html += `<div class="mc ${isToday(m) ? 'today-row' : ''}">
                             <div class="mc-teams">
                                 <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
                                 <span class="vs">vs</span>
@@ -715,9 +759,13 @@
         }
 
         function formatDate(dateStr) {
-            const d = new Date(dateStr);
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length < 3) return dateStr;
+            const day = parseInt(parts[2], 10);
+            const monthIndex = parseInt(parts[1], 10) - 1;
             const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-            return d.getDate() + ' ' + months[d.getMonth()];
+            return day + ' ' + (months[monthIndex] || '');
         }
 
         function getFlag(team) {
@@ -829,16 +877,24 @@ ${scoreText}
             'Monterrey (Guadalupe)':'مونتيري','San Francisco Bay Area (Santa Clara)':'سان فرانسيسكو'
         };
 
-        function astFromUtc(timeStr) {
-            if (!timeStr) return { time: '--:--', label: '--' };
+        function astFromUtc(timeStr, dateStr) {
+            if (!timeStr) return { time: '--:--', label: '--', date: dateStr };
             const parts = timeStr.match(/(\d+):(\d+)\s*UTC([+-]\d+)/);
-            if (!parts) return { time: timeStr, label: '' };
+            if (!parts) return { time: timeStr, label: '', date: dateStr };
             let h = parseInt(parts[1]), m = parseInt(parts[2]), offset = parseInt(parts[3]);
             let astH = h - offset + 3;
-            if (astH >= 24) astH -= 24;
-            if (astH < 0) astH += 24;
+            let dayOffset = 0;
+            if (astH >= 24) { astH -= 24; dayOffset = 1; }
+            if (astH < 0) { astH += 24; dayOffset = -1; }
             const lbl = astH >= 0 && astH < 5 ? 'فجرًا' : astH < 12 ? 'صباحًا' : astH < 13 ? 'ظهرًا' : astH < 17 ? 'بعد الظهر' : astH < 21 ? 'مساءً' : 'ليلاً';
-            return { time: String(astH).padStart(2,'0') + ':' + String(m).padStart(2,'0'), label: lbl };
+            
+            let astDate = dateStr;
+            if (dayOffset !== 0 && dateStr) {
+                const dp = dateStr.split('-').map(Number);
+                const d = new Date(Date.UTC(dp[0], dp[1]-1, dp[2] + dayOffset));
+                astDate = d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+            }
+            return { time: String(astH).padStart(2,'0') + ':' + String(m).padStart(2,'0'), label: lbl, date: astDate };
         }
 
         function isKnockoutSlot(name) {
@@ -849,11 +905,12 @@ ${scoreText}
             const matches = [];
             data.matches.forEach((m, i) => {
                 if (isKnockoutSlot(m.team1) || isKnockoutSlot(m.team2)) return;
-                const ast = astFromUtc(m.time);
+                const ast = astFromUtc(m.time, m.date);
                 const score = m.score && m.score.ft ? m.score.ft : null;
                 matches.push({
                     id: i + 1,
                     date: m.date,
+                    dateAst: ast.date,
                     timeAst: ast.time,
                     timeLabel: ast.label,
                     team1Ar: TEAM_NAMES[m.team1] || m.team1,
@@ -895,6 +952,21 @@ ${scoreText}
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 const data = await resp.json();
                 allMatches = data.matches;
+                
+                allMatches.forEach(m => {
+                    if (!m.dateAst && m.timeAst) {
+                        if (m.timeAst < '06:00') {
+                            const dp = m.date.split('-').map(Number);
+                            const d = new Date(Date.UTC(dp[0], dp[1]-1, dp[2] + 1));
+                            m.dateAst = d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+                        } else {
+                            m.dateAst = m.date;
+                        }
+                    } else if (!m.dateAst) {
+                        m.dateAst = m.date;
+                    }
+                });
+
                 const updated = new Date(data.lastUpdated);
                 info.textContent = `📁 ملف محلي · آخر تحديث: ${updated.toLocaleString('ar-SA')} · ${data.total} مباراة`;
                 buildFilters();
@@ -977,7 +1049,7 @@ ${scoreText}
             });
 
             html += `</div></div>`;
-            html += `<div style="text-align:center;color:#555;font-size:clamp(10px,0.8vw,13px);margin-top:10px;">المصدر: livehd7sport.com · قد تحتاج لاستخدام VPN لبعض الروابط</div>`;
+            html += `<div style="text-align:center;color:#555;font-size:clamp(10px,0.8vw,13px);margin-top:10px;">إذا كانت بعض الروابط لا تعمل أعد المحاولة بعد استخدام VPN</div>`;
             content.innerHTML = html;
         }
 
