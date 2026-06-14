@@ -93,6 +93,40 @@
         }
         .group-body.open { display: block; }
 
+        .table-wrap { overflow-x: auto; }
+
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .header h1 { font-size: 20px; }
+            .header p { font-size: 12px; }
+            .time-bar { flex-wrap: wrap; font-size: 16px; padding: 12px 15px; }
+            .time-bar .time { font-size: 22px; }
+            table { font-size: 11px; }
+            td, th { padding: 8px 5px; white-space: nowrap; }
+            .match-teams { font-size: 12px; min-width: auto; }
+            .match-teams .flag { font-size: 15px; }
+            .match-teams .vs { margin: 0 3px; }
+            .score-cell { font-size: 14px; min-width: 35px; }
+            .stadium-cell { display: none; }
+            .date-cell { font-size: 11px; }
+            .time-ast { font-size: 12px; }
+            .group-header { font-size: 15px; padding: 10px 12px; }
+            .filter-btn { font-size: 12px; padding: 6px 12px; }
+            .modal-content { margin: 10px; }
+            .modal-player { aspect-ratio: 16/9; }
+        }
+        @media (max-width: 480px) {
+            .header h1 { font-size: 17px; }
+            .time-bar .time { font-size: 18px; }
+            table { font-size: 10px; }
+            td, th { padding: 6px 3px; }
+            .match-teams { font-size: 11px; }
+            .score-cell { font-size: 12px; min-width: 28px; }
+            .group-header { font-size: 13px; padding: 8px 10px; }
+            .filter-btn { font-size: 11px; padding: 5px 9px; }
+            .time-bar { font-size: 13px; padding: 10px; flex-direction: column; gap: 5px; }
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -210,19 +244,6 @@
             border: none;
             display: block;
         }
-        @media (max-width: 768px) {
-            .container { padding: 10px; }
-            .header h1 { font-size: 20px; }
-            .time-bar { flex-wrap: wrap; font-size: 16px; }
-            .time-bar .time { font-size: 24px; }
-            table { font-size: 12px; }
-            td, th { padding: 10px 6px; }
-            .match-teams { font-size: 13px; min-width: auto; }
-            .score-cell { font-size: 15px; min-width: 40px; }
-            .stadium-cell { display: none; }
-            .date-cell { font-size: 12px; }
-            .time-ast { font-size: 13px; }
-        }
     </style>
 </head>
 <body>
@@ -277,7 +298,7 @@
         };
 
         let allMatches = [];
-        let activeFilter = 'all';
+        let activeFilter = 'today';
 
         function updateClock() {
             const now = new Date();
@@ -345,11 +366,11 @@
 
             if (activeGroup === 'today') {
                 html += `<div class="group-section">`;
-                html += `<div class="group-header">`;
+                html += `<div class="group-header open">`;
                 html += `<span>📅 مباريات اليوم (${formatDate(new Date().toISOString().slice(0,10))})</span>`;
                 html += `<span class="count">${filtered.length} مباراة</span>`;
                 html += `</div>`;
-                html += `<table><thead><tr>`;
+                html += `<div class="group-body open"><div class="table-wrap"><table><thead><tr>`;
                 html += `<th>التوقيت</th><th>المجموعة</th><th>المباراة</th><th>النتيجة</th><th>الملعب</th><th>الحالة</th>`;
                 html += `</tr></thead><tbody>`;
 
@@ -371,7 +392,7 @@
                     html += `</tr>`;
                 });
 
-                html += `</tbody></table></div>`;
+                html += `</tbody></table></div></div></div>`;
             } else {
                 const sortedGroups = Object.keys(grouped).sort();
                 sortedGroups.forEach((g, gi) => {
@@ -383,7 +404,7 @@
                     html += `<span><span class="toggle-icon">▶</span> ${GROUP_NAMES[g] || 'المجموعة ' + g}</span>`;
                     html += `<span class="count">${todayCount > 0 ? '🔴 ' + todayCount + ' اليوم · ' : ''}${matchesInGroup.length} مباريات</span>`;
                     html += `</div>`;
-                    html += `<div class="group-body${openDefault ? ' open' : ''}"><table><thead><tr>`;
+                    html += `<div class="group-body${openDefault ? ' open' : ''}"><div class="table-wrap"><table><thead><tr>`;
                     html += `<th>التاريخ</th><th>التوقيت (السعودية)</th><th>المباراة</th><th>النتيجة</th><th>الملعب</th><th>الحالة</th>`;
                     html += `</tr></thead><tbody>`;
 
@@ -406,7 +427,7 @@
                         html += `</tr>`;
                     });
 
-                    html += `</tbody></table></div></div>`;
+                    html += `</tbody></table></div></div></div>`;
                 });
             }
 
@@ -444,8 +465,8 @@
 
         function buildFilters() {
             const bar = document.getElementById('filterBar');
-            let html = `<button class="filter-btn active" data-group="all" onclick="setFilter('all')">الكل</button>`;
-            html += `<button class="filter-btn" data-group="today" onclick="setFilter('today')">📅 مباريات اليوم</button>`;
+            let html = `<button class="filter-btn" data-group="all" onclick="setFilter('all')">الكل</button>`;
+            html += `<button class="filter-btn active" data-group="today" onclick="setFilter('today')">📅 مباريات اليوم</button>`;
             html += `<button class="filter-btn" data-group="stream" onclick="setFilter('stream')">📺 مشاهدة</button>`;
             GROUPS.forEach(g => {
                 html += `<button class="filter-btn" data-group="${g}" onclick="setFilter('${g}')">${g}</button>`;
@@ -546,7 +567,7 @@
                     allMatches = parseOpenfootball(data);
                     info.textContent = `✅ تم التحديث من المصدر الرسمي · ${allMatches.length} مباراة`;
                     buildFilters();
-                    renderMatches(allMatches, 'all');
+                    setFilter('today');
                     return;
                 }
             } catch (e) {
@@ -562,7 +583,7 @@
                 const updated = new Date(data.lastUpdated);
                 info.textContent = `📁 ملف محلي · آخر تحديث: ${updated.toLocaleString('ar-SA')} · ${data.total} مباراة`;
                 buildFilters();
-                renderMatches(allMatches, 'all');
+                setFilter('today');
             } catch (err) {
                 console.error(err);
                 content.innerHTML = `
@@ -644,9 +665,33 @@
             content.innerHTML = html;
         }
 
-        function openStream(title, url) {
+        function embedFromChannel(channel) {
+            const map = {
+                'max1': 'https://tops.poiy.online/albaplayer/max1/',
+                'max2': 'https://tops.poiy.online/albaplayer/max2/',
+                'max3': 'https://tops.poiy.online/albaplayer/max3/',
+                'max4': 'https://tops.poiy.online/albaplayer/max4/',
+                'max5': 'https://tops.poiy.online/albaplayer/max5/',
+                'max6': 'https://tops.poiy.online/albaplayer/max6/',
+                'max7': 'https://tops.poiy.online/albaplayer/max7/',
+                'max8': 'https://tops.poiy.online/albaplayer/max8/'
+            };
+            if (!channel) return '';
+            const lower = channel.toLowerCase();
+            for (const [key, url] of Object.entries(map)) {
+                if (lower.includes(key)) return url;
+            }
+            return '';
+        }
+
+        function openStream(title, url, channel) {
+            let src = url;
+            // If no embedUrl, try to guess from channel name
+            if (!src || src === '' || src === 'about:blank') {
+                src = embedFromChannel(channel);
+            }
             document.getElementById('modalTitle').textContent = '📺 ' + title;
-            document.getElementById('modalPlayer').src = url;
+            document.getElementById('modalPlayer').src = src;
             document.getElementById('streamModal').classList.add('open');
             document.body.style.overflow = 'hidden';
         }
@@ -662,7 +707,7 @@
             if (btn) {
                 const idx = parseInt(btn.dataset.index);
                 const m = streamsData[idx];
-                if (m) openStream(m.team1 + ' vs ' + m.team2, m.embedUrl || m.url);
+                if (m) openStream(m.team1 + ' vs ' + m.team2, m.embedUrl || '', m.channel);
             }
             if (e.target.closest('#streamModal') && !e.target.closest('.modal-content')) {
                 closeStream();

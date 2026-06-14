@@ -76,7 +76,13 @@ async function scrape() {
     try {
       const html = await fetch(m.url);
       const $page = cheerio.load(html);
-      const iframeSrc = $page('iframe').first().attr('src') || '';
+      let iframeSrc = $page('iframe').first().attr('src') || '';
+      // Fallback: construct from channel name
+      if (!iframeSrc && m.channel) {
+        const ch = m.channel.toLowerCase();
+        const num = ch.match(/max\s*(\d+)/i);
+        if (num) iframeSrc = 'https://tops.poiy.online/albaplayer/max' + num[1] + '/';
+      }
       m.embedUrl = iframeSrc;
       if (iframeSrc) {
         try {
