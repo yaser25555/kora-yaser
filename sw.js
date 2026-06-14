@@ -1,4 +1,4 @@
-const CACHE_NAME = 'worldcup2026-v6';
+const CACHE_NAME = 'worldcup2026-v8';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
