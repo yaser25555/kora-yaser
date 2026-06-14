@@ -1564,7 +1564,11 @@ ${scoreText}
                         <div class="actions">
                             <span class="status-badge ${statusClass}">${statusMap[m.status] || m.statusText}</span>
                             ${m.channel ? `<span class="channel">📡 ${m.channel}</span>` : ''}
-                            <button class="stream-btn" data-index="${idx}">▶ مشاهدة</button>
+                            <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+                                <button class="stream-btn" data-index="${idx}" data-source="1">▶ المصدر 1</button>
+                                ${m.embedUrl2 ? `<button class="stream-btn alt-source" style="background: linear-gradient(135deg, #1976D2, #1565C0);" data-index="${idx}" data-source="2">▶ المصدر 2</button>` : ''}
+                                ${m.embedUrl3 ? `<button class="stream-btn alt-source" style="background: linear-gradient(135deg, #388E3C, #2E7D32);" data-index="${idx}" data-source="3">▶ المصدر 3</button>` : ''}
+                            </div>
                         </div>
                     </div>`;
             });
@@ -1615,8 +1619,14 @@ ${scoreText}
             const btn = e.target.closest('.stream-btn');
             if (btn) {
                 const idx = parseInt(btn.dataset.index);
+                const source = btn.dataset.source;
                 const m = streamsData[idx];
-                if (m) openStream(m.team1 + ' vs ' + m.team2, m.embedUrl || '', m.channel);
+                if (m) {
+                    let url = m.embedUrl;
+                    if (source === '2' && m.embedUrl2) url = m.embedUrl2;
+                    if (source === '3' && m.embedUrl3) url = m.embedUrl3;
+                    openStream(m.team1 + ' vs ' + m.team2, url || '', m.channel);
+                }
             }
             if (e.target.closest('#streamModal') && !e.target.closest('.modal-content')) {
                 closeStream();
