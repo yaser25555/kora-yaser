@@ -70,27 +70,68 @@ async function scrape() {
   // Filter only World Cup matches that are live or upcoming
   const activeMatches = matches.filter(m => m.league.includes('كأس العالم') && m.status !== 'finished');
 
-  // Extract embed URLs for active matches
+  // Extract embed URLs for active matches (up to 3 sources)
   console.log('جلب روابط المشغل المباشر...');
   for (const m of activeMatches) {
     try {
       const html = await fetch(m.url);
       const $page = cheerio.load(html);
-      let iframeSrc = $page('iframe').first().attr('src') || '';
-      // Fallback: construct from channel name
-      if (!iframeSrc && m.channel) {
+
+      // Collect all unique iframe sources from the match page
+      const iframeSources = [];
+      $page('iframe').each((j, iframe) => {
+        const src = $page(iframe).attr('src');
+        if (src && src.trim() && !iframeSources.includes(src.trim())) {
+          iframeSources.push(src.trim());
+        }
+      });
+
+      // Fallback: construct from channel name if no iframes found
+      if (iframeSources.length === 0 && m.channel) {
         const ch = m.channel.toLowerCase();
         const num = ch.match(/max\s*(\d+)/i);
-        if (num) iframeSrc = 'https://tops.poiy.online/albaplayer/max' + num[1] + '/';
+        if (num) {
+          iframeSources.push('https://tops.poiy.online/albaplayer/max' + num[1] + '/');
+        }
       }
-      m.embedUrl = iframeSrc;
-      if (iframeSrc) {
+
+      // Assign primary source
+      m.embedUrl = iframeSources[0] || '';
+
+      // Generate alternative sources from channel name
+      if (m.channel) {
+        const ch = m.channel.toLowerCase();
+        const num = ch.match(/max\s*(\d+)/i);
+        if (num) {
+          const primaryNum = parseInt(num[1]);
+          // Add alternative embed URLs based on different servers/players
+          const altSources = [
+            `https://tops.poiy.online/albaplayer/max${primaryNum}/`,
+            `https://tops.poiy.online/albaplayer2/max${primaryNum}/`,
+            `https://tops.poiy.online/albaplayer3/max${primaryNum}/`
+          ];
+          // Use iframeSources first, then fill with alt sources
+          const allSources = [...new Set([...iframeSources, ...altSources])];
+          m.embedUrl = allSources[0] || '';
+          if (allSources[1]) m.embedUrl2 = allSources[1];
+          if (allSources[2]) m.embedUrl3 = allSources[2];
+        }
+      }
+
+      // If we got iframe sources but no alt sources from channel, assign them directly
+      if (!m.embedUrl2 && iframeSources[1]) m.embedUrl2 = iframeSources[1];
+      if (!m.embedUrl3 && iframeSources[2]) m.embedUrl3 = iframeSources[2];
+
+      // Try to extract m3u8 from primary source
+      if (m.embedUrl) {
         try {
-          const embedHtml = await fetch(iframeSrc);
-          const m3u8Match = embedHtml.match(/['"]?([^'"]+\.m3u8)['"]?/i);
+          const embedHtml = await fetch(m.embedUrl);
+          const m3u8Match = embedHtml.match(/['\"]?([^'\"]+\.m3u8)['\"]?/i);
           if (m3u8Match) m.m3u8 = m3u8Match[1];
         } catch (e) { /* ignore */ }
       }
+
+      console.log(`  ✓ ${m.team1} vs ${m.team2}: ${m.embedUrl2 ? '3 مصادر' : m.embedUrl ? 'مصدر واحد' : 'بدون مصدر'}`);
     } catch (e) {
       m.embedUrl = '';
       console.log('  ⚠️ فشل جلب المشغل لـ ' + m.team1 + ' vs ' + m.team2);
