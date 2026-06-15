@@ -724,6 +724,8 @@
         .fav-row { background: rgba(255,215,0,0.03) !important; }
         .fav-row:hover { background: rgba(255,215,0,0.07) !important; }
         .fav-mc { border: 1px solid rgba(255,215,0,0.2) !important; }
+        .notify-select { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px 6px; font-size: clamp(10px,0.9vw,12px); font-family: inherit; cursor: pointer; outline: none; }
+        .notify-select option { background: #1a1a2e; color: #fff; }
 
         /* PWA Install Banner */
         .install-banner {
@@ -1221,7 +1223,14 @@
                     html += `<div class="group-section fav-section">`;
                     html += `<div class="group-header open" style="background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,193,7,0.05));border-bottom:1px solid rgba(255,215,0,0.2);">`;
                     html += `<span>⭐ مبارياتي</span>`;
-                    html += `<span class="count">${favMatches.length} مباراة</span>`;
+                    html += `<span class="count" style="display:flex;align-items:center;gap:8px;">`;
+                    html += `<select class="notify-select" onchange="setNotifyMin(parseInt(this.value))" title="الإشعارات">`;
+                    const curMin = getNotifyMin();
+                    [[30,'30 دقيقة'],[15,'15 دقيقة'],[0,'بداية المباراة']].forEach(([v,t]) => {
+                        html += `<option value="${v}"${v===curMin?' selected':''}>🔔 ${t}</option>`;
+                    });
+                    html += `</select>`;
+                    html += `<span>${favMatches.length} مباراة</span></span>`;
                     html += `</div>`;
                     html += `<div class="group-body open"><div class="table-wrap"><table><thead><tr>`;
                     html += `<th>التوقيت</th><th>المجموعة</th><th>المباراة</th><th>النتيجة</th><th>الملعب</th><th>الحالة</th><th style="width:40px;"></th>`;
@@ -1457,10 +1466,67 @@
 
         function favStar(teamEn, isFav) {
             const reRender = "renderMatches(allMatches, activeSection==='today'?'today':activeGroupFilter)";
-            return `<span class="fav-star ${isFav ? 'active' : ''}" data-team="${teamEn}" onclick="event.stopPropagation();this.classList.toggle('active');toggleFavorite('${teamEn}');${reRender}">${isFav ? '⭐' : '☆'}</span>`;
+            return `<span class="fav-star ${isFav ? 'active' : ''}" data-team="${teamEn}" onclick="event.stopPropagation();this.classList.toggle('active');toggleFavorite('${teamEn}');${reRender};requestNotifyPerm()">${isFav ? '⭐' : '☆'}</span>`;
         }
 
-        function shareMatch(id, btn) {
+        // === Notifications ===
+        const NOTIFY_MIN_KEY = 'kora_notify_min';
+        const NOTIFIED_KEY = 'kora_notified';
+
+        function getNotifyMin() {
+            return parseInt(localStorage.getItem(NOTIFY_MIN_KEY) || '30');
+        }
+
+        function setNotifyMin(min) {
+            localStorage.setItem(NOTIFY_MIN_KEY, String(min));
+            // Re-render favorites section to update UI
+            if (activeSection === 'today') renderMatches(allMatches, 'today');
+        }
+
+        function getNotifiedIds() {
+            try { return JSON.parse(localStorage.getItem(NOTIFIED_KEY) || '[]'); } catch(e) { return []; }
+        }
+
+        function markNotified(id) {
+            const ids = getNotifiedIds();
+            if (!ids.includes(id)) { ids.push(id); localStorage.setItem(NOTIFIED_KEY, JSON.stringify(ids)); }
+        }
+
+        function requestNotifyPerm() {
+            if (!('Notification' in window) || Notification.permission === 'granted' || Notification.permission === 'denied') return;
+            Notification.requestPermission();
+        }
+
+        function checkNotifications() {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+            const favs = getFavorites();
+            if (favs.length === 0) return;
+            const notifyMin = getNotifyMin();
+            const notified = getNotifiedIds();
+            const now = Date.now();
+
+            allMatches.forEach(m => {
+                if (notified.includes(m.id)) return;
+                if (!favs.includes(m.team1En) && !favs.includes(m.team2En)) return;
+
+                const ds = m.dateAst || m.date;
+                const tp = m.timeAst ? m.timeAst.split(':') : null;
+                if (!ds || !tp || tp.length < 2) return;
+                const h = parseInt(tp[0]), min = parseInt(tp[1]);
+                const dp = ds.split('-').map(Number);
+                if (dp.length < 3) return;
+
+                const matchUtc = Date.UTC(dp[0], dp[1] - 1, dp[2], h - 3, min);
+                const diffMin = (matchUtc - now) / 60000;
+
+                if (diffMin > 0 && diffMin <= notifyMin) {
+                    const title = `🔔 ${m.team1Ar} ${m.team2Ar}`;
+                    const body = notifyMin > 0 ? `المباراة بعد ${notifyMin} دقيقة` : 'المباراة بدأت الآن!';
+                    try { new Notification(title, { body, icon: '/icons/icon-192x192.png' }); } catch(e) {}
+                    markNotified(m.id);
+                }
+            });
+        }
             const m = allMatches.find(x => x.id === id);
             if (!m) return;
             const scoreText = m.score1 !== null ? `📊 ${m.score1} - ${m.score2}` : '';
@@ -1964,8 +2030,10 @@ ${scoreText}
         setInterval(updateClock, 1000);
         setInterval(renderLiveBar, 15000);
         setInterval(updateCountdowns, 60000);
+        setInterval(checkNotifications, 60000);
         updateClock();
         updateCountdowns();
+        checkNotifications();
         loadData();
         setInterval(loadData, 300000);
 
