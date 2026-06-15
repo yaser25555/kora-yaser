@@ -1,29 +1,10 @@
 {
-  "lastUpdated": "2026-06-15T00:21:21.530Z",
+  "lastUpdated": "2026-06-15T01:15:14.447Z",
   "source": "https://www.livehd7sport.com/",
-  "total": 4,
+  "total": 3,
   "matches": [
     {
       "id": 1,
-      "team1": "كوت ديفوار",
-      "team2": "الإكوادور",
-      "logo1": "https://www.livehd7sport.com/wp-content/uploads/2026/03/2385.png",
-      "logo2": "https://www.livehd7sport.com/wp-content/uploads/2026/03/5075.png",
-      "time": "02:00",
-      "score1": "0",
-      "score2": "0",
-      "status": "live",
-      "statusText": "جارية الان",
-      "channel": "beIN SPORTS MAX 1",
-      "league": "دولي, كأس العالم - المجموعة ه",
-      "url": "https://tops.poiy.online/investing-in-emerging-markets-identifying-high-growth-opportunitiess/",
-      "embedUrl": "https://tops.poiy.online/albaplayer/max1/",
-      "embedUrl2": "https://tops.poiy.online/albaplayer2/max1/",
-      "embedUrl3": "https://tops.poiy.online/albaplayer3/max1/",
-      "m3u8": "https://s3.us-east-2.amazonaws.com/yalapro8/hls/0/stream.m3u8"
-    },
-    {
-      "id": 2,
       "team1": "السويد",
       "team2": "تونس",
       "logo1": "https://www.livehd7sport.com/wp-content/uploads/2026/03/2371.png",
@@ -35,13 +16,18 @@
       "statusText": "لم تبدأ بعد",
       "channel": "beIN SPORTS MAX 2",
       "league": "دولي, كأس العالم - المجموعة و",
-      "url": "https://www.livehd7sport.com/matches/%d8%a7%d9%84%d8%b3%d9%88%d9%8a%d8%af-%d8%aa%d9%88%d9%86%d8%b3/",
-      "embedUrl": "https://tops.poiy.online/albaplayer/max2/",
-      "embedUrl2": "https://tops.poiy.online/albaplayer2/max2/",
-      "embedUrl3": "https://tops.poiy.online/albaplayer3/max2/"
+      "url": "https://tops.poiy.online/investing-in-emerging-markets-identifying-high-growth-opportunitiesss/",
+      "embedUrl": "https://s3.us-east-2.amazonaws.com/yallapro9/hls/0/stream.m3u8",
+      "embedUrl2": "https://live.kooran11.cfd/tist1/index.m3u8",
+      "embedUrl3": "https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8",
+      "embedUrl4": "https://11.yallashoot1.cc/albaplayer/ch1/?",
+      "embedUrl5": "https://s13.yalla-sport.top/ch/ch1.php",
+      "m3u8": "https://s3.us-east-2.amazonaws.com/yallapro9/hls/0/stream.m3u8",
+      "m3u82": "https://live.kooran11.cfd/tist1/index.m3u8",
+      "m3u83": "https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8"
     },
     {
-      "id": 3,
+      "id": 2,
       "team1": "إسبانيا",
       "team2": "الرأس الأخضر",
       "logo1": "https://www.livehd7sport.com/wp-content/uploads/2026/03/5050.png",
@@ -50,17 +36,21 @@
       "score1": "0",
       "score2": "0",
       "status": "upcoming",
-      "statusText": "��م تبدأ بعد",
+      "statusText": "لم تبدأ بعد",
       "channel": "beIN SPORTS MAX 1",
       "league": "دولي, كأس العالم - المجموعة ح",
       "url": "https://www.livehd7sport.com/matches/%d8%a5%d8%b3%d8%a8%d8%a7%d9%86%d9%8a%d8%a7-%d8%a7%d9%84%d8%b1%d8%a3%d8%b3-%d8%a7%d9%84%d8%a3%d8%ae%d8%b6%d8%b1/",
-      "embedUrl": "https://tops.poiy.online/albaplayer/max1/",
-      "embedUrl2": "https://tops.poiy.online/albaplayer2/max1/",
-      "embedUrl3": "https://tops.poiy.online/albaplayer3/max1/",
-      "m3u8": "https://s3.us-east-2.amazonaws.com/yalapro8/hls/0/stream.m3u8"
+      "embedUrl": "https://s3.us-east-2.amazonaws.com/yallapro9/hls/0/stream.m3u8",
+      "embedUrl2": "https://live.kooran11.cfd/tist1/index.m3u8",
+      "embedUrl3": "https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8",
+      "embedUrl4": "https://11.yallashoot1.cc/albaplayer/ch1/?",
+      "embedUrl5": "https://s13.yalla-sport.top/ch/ch1.php",
+      "m3u8": "https://s3.us-east-2.amazonaws.com/yallapro9/hls/0/stream.m3u8",
+      "m3u82": "https://live.kooran11.cfd/tist1/index.m3u8",
+      "m3u83": "https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8"
     },
     {
-      "id": 4,
+      "id": 3,
       "team1": "بلجيكا",
       "team2": "مصر",
       "logo1": "https://www.livehd7sport.com/wp-content/uploads/2026/03/2373.png",
@@ -73,9 +63,10 @@
       "channel": "beIN SPORTS MAX 2",
       "league": "دولي, كأس العالم - المجموعة ز",
       "url": "https://www.livehd7sport.com/matches/%d8%a8%d9%84%d8%ac%d9%8a%d9%83%d8%a7-%d9%85%d8%b5%d8%b1/",
-      "embedUrl": "https://tops.poiy.online/albaplayer/max2/",
-      "embedUrl2": "https://tops.poiy.online/albaplayer2/max2/",
-      "embedUrl3": "https://tops.poiy.online/albaplayer3/max2/"
+      "embedUrl": "https://s11.yalla-sport.top/ch/ch2.php",
+      "m3u8": "",
+      "m3u82": "",
+      "m3u83": ""
     }
   ]
 }

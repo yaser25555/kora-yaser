@@ -25,9 +25,7 @@ jobs:
         run: npm install cheerio
 
       - name: تشغيل سكريبت السحب
-        run: |
-          node scripts/scrape-streams.js
-          node scripts/kooragoal.js
+        run: node scripts/scrape-streams.js
 
       - name: رفع التحديثات
         run: |

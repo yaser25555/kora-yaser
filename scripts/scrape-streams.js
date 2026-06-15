@@ -9,6 +9,7 @@ const OUTPUT = path.join(__dirname, '..', 'streams.json');
 function fetch(url) {
   return new Promise((resolve, reject) => {
     https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (res) => {
+      res.setEncoding('utf8');
       let data = '';
       res.on('data', (chunk) => data += chunk);
       res.on('end', () => resolve(data));
@@ -86,50 +87,94 @@ async function scrape() {
         }
       });
 
-      // Fallback: construct from channel name if no iframes found
-      if (iframeSources.length === 0 && m.channel) {
-        const ch = m.channel.toLowerCase();
-        const num = ch.match(/max\s*(\d+)/i);
-        if (num) {
-          iframeSources.push('https://tops.poiy.online/albaplayer/max' + num[1] + '/');
+      // Function to extract real sources from albaplayer page
+      async function extractAlbaSources(pageUrl) {
+        const result = { m3u8s: [], iframes: [] };
+        if (!pageUrl) return result;
+
+        // Fetch the albaplayer page (serv=1 / default)
+        function extractFromHtml(html) {
+          // Clappr player: source:"URL"
+          const clappr = html.match(/source\s*:\s*["']([^"']+\.m3u8[^"']*)["']/);
+          if (clappr && !result.m3u8s.includes(clappr[1])) result.m3u8s.push(clappr[1]);
+
+          // AlbaPlayerControl('base64','hls') — decode base64
+          const b64Re = /AlbaPlayerControl\s*\(\s*['"]([A-Za-z0-9+/=]+)['"]/g;
+          let bm;
+          while ((bm = b64Re.exec(html)) !== null) {
+            try {
+              const dec = Buffer.from(bm[1], 'base64').toString();
+              if (dec.includes('.m3u8') && !result.m3u8s.includes(dec)) result.m3u8s.push(dec);
+            } catch(e) {}
+          }
+
+          // Bitmovin: source = {'hls':'URL'}
+          const bit = html.match(/['"]hls['"]\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
+          if (bit && !result.m3u8s.includes(bit[1])) result.m3u8s.push(bit[1]);
+
+          // iframes
+          const $s = cheerio.load(html);
+          $s('iframe').each((j, ifr) => {
+            const src = $s(ifr).attr('src');
+            if (src && src.trim() && !result.iframes.includes(src.trim())) result.iframes.push(src.trim());
+          });
         }
-      }
 
-      // Assign primary source
-      m.embedUrl = iframeSources[0] || '';
-
-      // Generate alternative sources from channel name
-      if (m.channel) {
-        const ch = m.channel.toLowerCase();
-        const num = ch.match(/max\s*(\d+)/i);
-        if (num) {
-          const primaryNum = parseInt(num[1]);
-          // Add alternative embed URLs based on different servers/players
-          const altSources = [
-            `https://tops.poiy.online/albaplayer/max${primaryNum}/`,
-            `https://tops.poiy.online/albaplayer2/max${primaryNum}/`,
-            `https://tops.poiy.online/albaplayer3/max${primaryNum}/`
-          ];
-          // Use iframeSources first, then fill with alt sources
-          const allSources = [...new Set([...iframeSources, ...altSources])];
-          m.embedUrl = allSources[0] || '';
-          if (allSources[1]) m.embedUrl2 = allSources[1];
-          if (allSources[2]) m.embedUrl3 = allSources[2];
-        }
-      }
-
-      // If we got iframe sources but no alt sources from channel, assign them directly
-      if (!m.embedUrl2 && iframeSources[1]) m.embedUrl2 = iframeSources[1];
-      if (!m.embedUrl3 && iframeSources[2]) m.embedUrl3 = iframeSources[2];
-
-      // Try to extract m3u8 from primary source
-      if (m.embedUrl) {
         try {
-          const embedHtml = await fetch(m.embedUrl);
-          const m3u8Match = embedHtml.match(/['\"]?([^'\"]+\.m3u8)['\"]?/i);
-          if (m3u8Match) m.m3u8 = m3u8Match[1];
-        } catch (e) { /* ignore */ }
+          const mainHtml = await fetch(pageUrl);
+          extractFromHtml(mainHtml);
+
+          // Parse server menu for additional servers
+          const $m = cheerio.load(mainHtml);
+          const serverUrls = [];
+          $m('.aplr-menu a').each((j, a) => {
+            const href = $m(a).attr('href');
+            if (href && !serverUrls.includes(href)) serverUrls.push(href);
+          });
+
+          // Fetch up to 5 other servers for more sources
+          for (const sUrl of serverUrls) {
+            if (result.m3u8s.length + result.iframes.length >= 6) break;
+            if (sUrl.includes('serv=1')) continue;
+
+            try {
+              const sHtml = await fetch(sUrl);
+              extractFromHtml(sHtml);
+            } catch(e) { /* skip failed server */ }
+          }
+        } catch(e) { /* page not albaplayer, keep original sources */ }
+
+        return result;
       }
+
+      // Get primary embed URL from match page
+      const primaryUrl = iframeSources[0] || '';
+
+      // Fallback: construct albaplayer URL from channel name
+      let channelUrl = '';
+      if (!primaryUrl && m.channel) {
+        const numMatch = m.channel.toLowerCase().match(/max\s*(\d+)/i);
+        if (numMatch) {
+          channelUrl = 'https://tops.poiy.online/albaplayer/max' + numMatch[1] + '/';
+        }
+      }
+
+      // Extract real sources from albaplayer page
+      const albaSources = await extractAlbaSources(primaryUrl || channelUrl);
+
+      // Combine all unique sources: m3u8 first (preferred), then iframes
+      const allRealSources = [...albaSources.m3u8s, ...albaSources.iframes, ...iframeSources];
+      const uniqueSources = [...new Set(allRealSources)];
+
+      // Assign sources 1, 2, 3 and m3u8
+      m.embedUrl = uniqueSources[0] || primaryUrl || '';
+      if (uniqueSources[1]) m.embedUrl2 = uniqueSources[1];
+      if (uniqueSources[2]) m.embedUrl3 = uniqueSources[2];
+      if (uniqueSources[3]) m.embedUrl4 = uniqueSources[3];
+      if (uniqueSources[4]) m.embedUrl5 = uniqueSources[4];
+      m.m3u8 = albaSources.m3u8s[0] || '';
+      m.m3u82 = albaSources.m3u8s[1] || '';
+      m.m3u83 = albaSources.m3u8s[2] || '';
 
       console.log(`  ✓ ${m.team1} vs ${m.team2}: ${m.embedUrl2 ? '3 مصادر' : m.embedUrl ? 'مصدر واحد' : 'بدون مصدر'}`);
     } catch (e) {

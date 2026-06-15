@@ -15,6 +15,7 @@
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <!-- Cairo Arabic Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
@@ -708,6 +709,12 @@
             min-height: 44px;
         }
         .stream-btn:hover { background: linear-gradient(135deg, #e53935, #c62828); transform: scale(1.05); box-shadow: 0 6px 14px rgba(211,47,47,0.5); }
+        .m3u8-source { background: linear-gradient(135deg, #00897B, #00695C) !important; box-shadow: 0 4px 10px rgba(0,137,123,0.35) !important; }
+        .m3u8-source:hover { background: linear-gradient(135deg, #26A69A, #00897B) !important; transform: scale(1.05); box-shadow: 0 6px 14px rgba(0,137,123,0.5) !important; }
+        .source-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+        .source-btns .stream-btn { white-space: normal; font-size: clamp(11px, 1.1vw, 13px); padding: 10px 8px; min-height: 38px; }
+        .channel-card { padding: 16px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); margin-bottom: 10px; }
+        .channel-title { font-size: clamp(14px, 1.4vw, 18px); font-weight: 800; color: #4FC3F7; text-align: center; margin-bottom: 4px; }
 
         /* PWA Install Banner */
         .install-banner {
@@ -1002,6 +1009,10 @@
                 <svg viewBox="0 0 24 24"><path d="M21,3H3C1.89,3 1,3.89 1,5V17C1,18.11 1.89,19 3,19H8V21H16V19H21C22.11,19 23,18.11 23,17V5C23,3.89 22.11,3 21,3M21,17H3V5H21V17M16,11L9,15V7L16,11Z"/></svg>
                 <span>البث المباشر</span>
             </button>
+            <button class="nav-tab" id="tab-channels" onclick="switchSection('channels')">
+                <svg viewBox="0 0 24 24"><path d="M21,6V8H3V6H21M3,16H21V14H3V16M3,11H21V9H3V11M3,21H21V19H3V21Z"/></svg>
+                <span>القنوات</span>
+            </button>
         </div>
 
         <!-- Sub-Navigation for Groups (A to L) -->
@@ -1036,6 +1047,7 @@
                 <span>هذا البث من مصدر خارجي. في حال فتح لك نافذة إعلان، قم بإغلاقها فوراً والعودة هنا للتشغيل.</span>
             </div>
             <iframe class="modal-player" id="modalPlayer" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+            <video class="modal-player" id="modalVideo" style="display:none" controls preload="metadata" playsinline></video>
         </div>
     </div>
 
@@ -1141,6 +1153,29 @@
             const pm = h >= 12;
             const h12 = h % 12 || 12;
             return String(h12).padStart(2,'0') + ':' + String(m).padStart(2,'0') + (pm ? ' م' : ' ص');
+        }
+
+        function countdownText(dateStr, timeAst) {
+            if (!dateStr || !timeAst) return '';
+            const [yh, mh, dh] = dateStr.split('-').map(Number);
+            const [hh, mnt] = timeAst.split(':').map(Number);
+            const matchTime = new Date(Date.UTC(yh, mh - 1, dh, hh - 3, mnt));
+            const now = new Date();
+            const diffMs = matchTime - now;
+            if (diffMs <= 0) return '';
+            const totalMin = Math.floor(diffMs / 60000);
+            const hours = Math.floor(totalMin / 60);
+            const mins = totalMin % 60;
+            if (hours > 0) return 'بعد ' + hours + ' ساعة و ' + mins + ' دقيقة';
+            return 'بعد ' + mins + ' دقيقة';
+        }
+
+        function updateCountdowns() {
+            document.querySelectorAll('.countdown').forEach(el => {
+                const date = el.dataset.date;
+                const time = el.dataset.time;
+                el.textContent = countdownText(date, time) || '';
+            });
         }
 
         function isToday(m) {
@@ -1291,8 +1326,8 @@
                 });
             }
 
-            if ((activeGroup !== 'home' && Object.keys(grouped).length === 0) ||
-                (activeGroup === 'home' && filtered.length === 0)) {
+            if ((activeGroup !== 'today' && Object.keys(grouped).length === 0) ||
+                (activeGroup === 'today' && filtered.length === 0)) {
                 html = `<div style="text-align:center;padding:40px;color:#666;">لا توجد مباريات في هذا التصنيف</div>`;
             }
 
@@ -1367,6 +1402,8 @@ ${scoreText}
                     renderMatches(allMatches, 'today');
                 } else if (section === 'stream') {
                     loadStreams();
+                } else if (section === 'channels') {
+                    loadChannels();
                 }
             }
         }
@@ -1652,10 +1689,15 @@ ${scoreText}
                         <div class="actions">
                             <span class="status-badge ${statusClass}">${statusMap[m.status] || m.statusText}</span>
                             ${m.channel ? `<span class="channel">📡 ${m.channel}</span>` : ''}
-                            <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
-                                <button class="stream-btn" data-index="${idx}" data-source="1">▶ المصدر 1</button>
-                                ${m.embedUrl2 ? `<button class="stream-btn alt-source" style="background: linear-gradient(135deg, #1976D2, #1565C0);" data-index="${idx}" data-source="2">▶ المصدر 2</button>` : ''}
-                                ${m.embedUrl3 ? `<button class="stream-btn alt-source" style="background: linear-gradient(135deg, #388E3C, #2E7D32);" data-index="${idx}" data-source="3">▶ المصدر 3</button>` : ''}
+                            <div class="source-btns">
+                                ${m.embedUrl ? `<button class="stream-btn" data-index="${idx}" data-source="1">▶ المصدر 1</button>` : ''}
+                                ${m.embedUrl2 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#1976D2,#1565C0)" data-index="${idx}" data-source="2">▶ المصدر 2</button>` : ''}
+                                ${m.embedUrl3 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#388E3C,#2E7D32)" data-index="${idx}" data-source="3">▶ المصدر 3</button>` : ''}
+                                ${m.embedUrl4 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#7B1FA2,#6A1B9A)" data-index="${idx}" data-source="4">▶ المصدر 4</button>` : ''}
+                                ${m.embedUrl5 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#E65100,#BF360C)" data-index="${idx}" data-source="5">▶ المصدر 5</button>` : ''}
+                                ${m.m3u8 ? `<button class="stream-btn m3u8-source" data-index="${idx}" data-source="m3u8">▶ HLS 1</button>` : ''}
+                                ${m.m3u82 ? `<button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#00695C,#004D40)!important" data-index="${idx}" data-source="m3u82">▶ HLS 2</button>` : ''}
+                                ${m.m3u83 ? `<button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#4E342E,#3E2723)!important" data-index="${idx}" data-source="m3u83">▶ HLS 3</button>` : ''}
                             </div>
                         </div>
                     </div>`;
@@ -1666,39 +1708,129 @@ ${scoreText}
             content.innerHTML = html;
         }
 
-        function embedFromChannel(channel) {
-            const map = {
-                'max1': 'https://tops.poiy.online/albaplayer/max1/',
-                'max2': 'https://tops.poiy.online/albaplayer/max2/',
-                'max3': 'https://tops.poiy.online/albaplayer/max3/',
-                'max4': 'https://tops.poiy.online/albaplayer/max4/',
-                'max5': 'https://tops.poiy.online/albaplayer/max5/',
-                'max6': 'https://tops.poiy.online/albaplayer/max6/',
-                'max7': 'https://tops.poiy.online/albaplayer/max7/',
-                'max8': 'https://tops.poiy.online/albaplayer/max8/'
-            };
-            if (!channel) return '';
-            const lower = channel.toLowerCase();
-            for (const [key, url] of Object.entries(map)) {
-                if (lower.includes(key)) return url;
+        // === Channels Tab ===
+        async function loadChannels() {
+            const content = document.getElementById('content');
+            const info = document.getElementById('updateInfo');
+            content.innerHTML = `<div class="loading"><div class="spinner"></div><div>جارٍ تحميل القنوات...</div></div>`;
+
+            try {
+                const resp = await fetch('./streams.json?t=' + Date.now());
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const data = await resp.json();
+                streamsData = data.matches;
+                info.innerHTML = '';
+                renderChannels(streamsData);
+            } catch (err) {
+                content.innerHTML = `<div class="error-msg">❌ فشل تحميل القنوات: ${err.message}</div>`;
             }
-            return '';
         }
 
-        function openStream(title, url, channel) {
-            let src = url;
-            // If no embedUrl, try to guess from channel name
-            if (!src || src === '' || src === 'about:blank') {
-                src = embedFromChannel(channel);
+        function renderChannels(matches) {
+            const content = document.getElementById('content');
+            if (!matches || matches.length === 0) {
+                content.innerHTML = `<div style="text-align:center;padding:40px;color:#666;">لا توجد قنوات متاحة حالياً</div>`;
+                return;
             }
+
+            // Group sources by channel
+            const channelMap = {};
+            matches.forEach((m, idx) => {
+                if (!m.channel) return;
+                const ch = m.channel;
+                if (!channelMap[ch]) channelMap[ch] = { channel: ch, matchIdx: idx, match: m };
+            });
+
+            let html = `<div class="group-section">`;
+            html += `<div class="group-header"><span>📡 القنوات الرياضية المباشرة</span><span class="count">${Object.keys(channelMap).length} قناة</span></div>`;
+
+            Object.values(channelMap).forEach(ch => {
+                const m = ch.match;
+                const idx = ch.matchIdx;
+                html += `<div class="stream-card channel-card">
+                    <div class="channel-title">📡 ${ch.channel}</div>
+                    <div style="font-size:12px;color:#999;margin-bottom:8px;text-align:center;">${m.team1} vs ${m.team2}</div>
+                    <div class="actions">
+                        <div class="source-btns">
+                            ${m.embedUrl ? `<button class="stream-btn" data-index="${idx}" data-source="1">▶ 1</button>` : ''}
+                            ${m.embedUrl2 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#1976D2,#1565C0)" data-index="${idx}" data-source="2">▶ 2</button>` : ''}
+                            ${m.embedUrl3 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#388E3C,#2E7D32)" data-index="${idx}" data-source="3">▶ 3</button>` : ''}
+                            ${m.embedUrl4 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#7B1FA2,#6A1B9A)" data-index="${idx}" data-source="4">▶ 4</button>` : ''}
+                            ${m.embedUrl5 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#E65100,#BF360C)" data-index="${idx}" data-source="5">▶ 5</button>` : ''}
+                            ${m.m3u8 ? `<button class="stream-btn m3u8-source" data-index="${idx}" data-source="m3u8">▶ H1</button>` : ''}
+                            ${m.m3u82 ? `<button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#00695C,#004D40)!important" data-index="${idx}" data-source="m3u82">▶ H2</button>` : ''}
+                            ${m.m3u83 ? `<button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#4E342E,#3E2723)!important" data-index="${idx}" data-source="m3u83">▶ H3</button>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            html += `</div>`;
+            html += `<div style="text-align:center;color:#555;font-size:clamp(10px,0.8vw,13px);margin-top:10px;">جميع المصادر من خوادم متعددة - اختر الأنسب لك</div>`;
+            content.innerHTML = html;
+        }
+
+        let hlsInstance = null;
+
+        function openStream(title, url, channel) {
+            const iframe = document.getElementById('modalPlayer');
+            const video = document.getElementById('modalVideo');
+            iframe.style.display = 'none';
+            video.style.display = 'none';
+            if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+
+            if (!url && channel) {
+                const map = {
+                    'max1': 'https://tops.poiy.online/albaplayer/max1/',
+                    'max2': 'https://tops.poiy.online/albaplayer/max2/',
+                    'max3': 'https://tops.poiy.online/albaplayer/max3/',
+                    'max4': 'https://tops.poiy.online/albaplayer/max4/',
+                    'max5': 'https://tops.poiy.online/albaplayer/max5/',
+                    'max6': 'https://tops.poiy.online/albaplayer/max6/',
+                    'max7': 'https://tops.poiy.online/albaplayer/max7/',
+                    'max8': 'https://tops.poiy.online/albaplayer/max8/'
+                };
+                const lower = channel.toLowerCase();
+                for (const [key, val] of Object.entries(map)) {
+                    if (lower.includes(key)) { url = val; break; }
+                }
+            }
+
+            // Detect if it's an m3u8 URL
+            if (url && url.includes('.m3u8')) {
+                video.style.display = 'block';
+                if (Hls.isSupported()) {
+                    const hls = new Hls();
+                    hls.loadSource(url);
+                    hls.attachMedia(video);
+                    hlsInstance = hls;
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = url;
+                    video.addEventListener('loadedmetadata', () => video.play().catch(() => {}));
+                } else {
+                    video.style.display = 'none';
+                    iframe.style.display = 'block';
+                    iframe.src = url;
+                }
+            } else {
+                iframe.style.display = 'block';
+                iframe.src = url || '';
+            }
+
             document.getElementById('modalTitle').textContent = '📺 ' + title;
-            document.getElementById('modalPlayer').src = src;
             document.getElementById('streamModal').classList.add('open');
             document.body.style.overflow = 'hidden';
         }
 
         function closeStream() {
+            if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+            const video = document.getElementById('modalVideo');
+            video.pause();
+            video.src = '';
+            video.style.display = 'none';
             document.getElementById('modalPlayer').src = '';
+            document.getElementById('modalPlayer').style.display = 'block';
             document.getElementById('streamModal').classList.remove('open');
             document.body.style.overflow = '';
         }
@@ -1710,9 +1842,19 @@ ${scoreText}
                 const source = btn.dataset.source;
                 const m = streamsData[idx];
                 if (m) {
-                    let url = m.embedUrl;
-                    if (source === '2' && m.embedUrl2) url = m.embedUrl2;
-                    if (source === '3' && m.embedUrl3) url = m.embedUrl3;
+                    let url = m.embedUrl || '';
+                    const sourceMap = {
+                        '1': 'embedUrl',
+                        '2': 'embedUrl2',
+                        '3': 'embedUrl3',
+                        '4': 'embedUrl4',
+                        '5': 'embedUrl5',
+                        'm3u8': 'm3u8',
+                        'm3u82': 'm3u82',
+                        'm3u83': 'm3u83'
+                    };
+                    const key = sourceMap[source];
+                    if (key && m[key]) url = m[key];
                     openStream(m.team1 + ' vs ' + m.team2, url || '', m.channel);
                 }
             }
@@ -1723,7 +1865,9 @@ ${scoreText}
 
         setInterval(updateClock, 1000);
         setInterval(renderLiveBar, 15000);
+        setInterval(updateCountdowns, 60000);
         updateClock();
+        updateCountdowns();
         loadData();
         setInterval(loadData, 300000);
 
