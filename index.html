@@ -109,25 +109,24 @@
             line-height: 1.25;
             display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             text-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
-        .brand-yaser, .brand-kora {
+        .brand-yaser {
+            color: #ff2156;
+        }
+        .brand-kora {
             background: linear-gradient(135deg, #fff 40%, #ffc107 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .brand-dove {
-            width: clamp(26px, 3.8vw, 40px);
-            height: clamp(26px, 3.8vw, 40px);
-            fill: #00d2ff;
-            stroke: #ffffff;
-            stroke-width: 16px;
-            stroke-linejoin: round;
-            filter: drop-shadow(0 0 12px rgba(0, 210, 255, 0.6)) drop-shadow(0 0 3px #ffffff);
-            animation: dove-float 3s ease-in-out infinite;
+            font-size: clamp(26px, 3.8vw, 40px);
             display: inline-block;
+            animation: dove-float 3s ease-in-out infinite;
+            filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.15));
             flex-shrink: 0;
+            line-height: 1;
         }
         @keyframes dove-float {
             0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -967,7 +966,7 @@
             regs.forEach(reg => reg.update());
         });
         caches.keys().then(keys => {
-            keys.forEach(k => { if (k !== 'worldcup2026-v8') caches.delete(k); });
+            keys.forEach(k => { if (k !== 'worldcup2026-v9') caches.delete(k); });
         });
     }
     </script>
@@ -980,9 +979,7 @@
                 <div class="hero-title-group">
                     <h1 class="hero-title">
                         <span class="brand-yaser">ϓλșεર.</span>
-                        <svg class="brand-dove" viewBox="0 0 512 512">
-                            <path d="M288 167.2v-28.1c-28.2-36.3-47.1-79.3-54.1-125.2-2.1-13.5-19-18.8-27.8-8.3-21.1 24.9-37.7 54.1-48.9 86.5 34.2 38.3 80 64.6 130.8 75.1zM400 64c-44.2 0-80 35.9-80 80.1v59.4C215.6 197.3 127 217.4 83.2 248.8 33.8 284 3.7 339.6.2 399.7c-.5 9.1 7.2 16.7 16.3 16.3 78.5-3.8 141.6-47.3 189.6-96.8 56.6 22.8 116.7 27.6 177.3 14.1 61.4-13.8 111.4-44.5 142.1-90.8 28.5-43.5 35.4-93.5 24.2-142.7-3.9-17-27.1-16.7-33.8-1.5-15.1 34.5-44.5 59.8-80.1 71.4-2.4.8-4.7 1.4-7.1 2V144.1C320 102.5 355.8 64 400 64z"/>
-                        </svg>
+                        <span class="brand-dove">🕊️</span>
                         <span class="brand-kora">-KORA</span>
                     </h1>
                     <p class="hero-motto">نحاول نشر السعادة بأبسط الطرق، لا إعلانات، لا مدفوعات، لا مبالغ اشتراك (تكفينا دعوة بالتوفيق) ❤️ 🤍</p>
@@ -1203,7 +1200,7 @@
                 filtered.sort((a, b) => a.timeAst.localeCompare(b.timeAst)).forEach(m => {
                     const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
                     html += `<tr class="today-row">`;
-                    html += `<td><span class="time-ast">${m.timeAst}</span><br><span class="time-label">${m.timeLabel}</span></td>`;
+                    html += `<td><span class="time-ast">${to12h(m.timeAst)}</span><br><span class="time-label">${m.timeLabel}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
                     html += `<td><span class="group-badge">${m.group}</span></td>`;
                     html += `<td class="match-teams">
                         <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
@@ -1234,7 +1231,7 @@
                             ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span>
                         </div>
                         <div class="mc-info">
-                            <span class="mc-time">${m.timeAst} ${m.timeLabel}</span>
+                            <span class="mc-time">${to12h(m.timeAst)} ${m.timeLabel}</span>
                             <span class="group-badge" style="font-size:11px;background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:10px;">${m.group}</span>
                             <span class="mc-score ${m.score1 !== null ? 'has-score' : ''}">${scoreDisplay}</span>
                             <span class="status-badge ${status}">${statusText}</span>
@@ -1263,7 +1260,7 @@
                         const isTodayMatch = isToday(m);
                         html += `<tr class="${isTodayMatch ? 'today-row' : ''}">`;
                         html += `<td class="date-cell">${formatDate(m.dateAst || m.date)}</td>`;
-                        html += `<td><span class="time-ast">${m.timeAst}</span><br><span class="time-label">${m.timeLabel}</span></td>`;
+                        html += `<td><span class="time-ast">${to12h(m.timeAst)}</span><br><span class="time-label">${m.timeLabel}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
                         html += `<td class="match-teams">
                             <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
                             <span class="vs">vs</span>
@@ -1300,7 +1297,7 @@
                                 ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span>
                             </div>
                             <div class="mc-info">
-                                <span class="mc-time">${m.timeAst} ${m.timeLabel}</span>
+                                <span class="mc-time">${to12h(m.timeAst)} ${m.timeLabel}</span>
                                 <span style="font-size:11px;color:#888;">${m.stadium}</span>
                                 <span class="mc-score ${m.score1 !== null ? 'has-score' : ''}">${scoreDisplay}</span>
                                 <span class="status-badge ${status}">${statusText}</span>
@@ -1312,8 +1309,8 @@
                 });
             }
 
-            if ((activeGroup !== 'today' && Object.keys(grouped).length === 0) ||
-                (activeGroup === 'today' && filtered.length === 0)) {
+            if ((activeGroup !== 'home' && Object.keys(grouped).length === 0) ||
+                (activeGroup === 'home' && filtered.length === 0)) {
                 html = `<div style="text-align:center;padding:40px;color:#666;">لا توجد مباريات في هذا التصنيف</div>`;
             }
 
@@ -1354,7 +1351,7 @@
             const scoreText = m.score1 !== null ? `📊 ${m.score1} - ${m.score2}` : '';
             const text = `🏆 كأس العالم 2026
 ${m.team1Ar} 🆚 ${m.team2Ar}
-⏰ ${m.date} - ${m.timeAst} ${m.timeLabel}
+⏰ ${m.dateAst || m.date} - ${to12h(m.timeAst)} ${m.timeLabel}
 ${scoreText}
 📍 ${m.stadium}
 🔗 https://kora-yaser.web.app`;
