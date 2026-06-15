@@ -113,9 +113,9 @@
             line-height: 1.25;
         }
         .hero-logo-img {
-            max-width: clamp(110px, 15vw, 170px);
+            max-width: clamp(80px, 11vw, 125px);
             height: auto;
-            margin-top: 8px;
+            margin-bottom: 4px;
             filter: drop-shadow(0 4px 12px rgba(255, 33, 86, 0.2));
             align-self: flex-start;
         }
@@ -953,7 +953,7 @@
             regs.forEach(reg => reg.update());
         });
         caches.keys().then(keys => {
-            keys.forEach(k => { if (k !== 'worldcup2026-v11') caches.delete(k); });
+            keys.forEach(k => { if (k !== 'worldcup2026-v12') caches.delete(k); });
         });
     }
     </script>
@@ -964,9 +964,8 @@
             <div class="hero-overlay"></div>
             <div class="hero-content">
                 <div class="hero-title-group">
-                    <h1 class="hero-title">YASEER-KOORA</h1>
+                    <img src="./logo.png" alt="YASEER-KOORA" class="hero-logo-img">
                     <p class="hero-motto">نحاول نشر السعادة بأبسط الطرق، لا إعلانات، لا مدفوعات، لا مبالغ اشتراك (تكفينا دعوة بالتوفيق) ❤️ 🤍</p>
-                    <img src="./logo.png" alt="YASER-KORA" class="hero-logo-img">
                 </div>
                 <div class="hero-media">
                     <img src="./maradona.png" alt="دييغو مارادونا" class="maradona-img">
