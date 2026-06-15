@@ -810,6 +810,57 @@
         .group-sub-content { display: none; }
         .group-sub-content.active { display: block; }
 
+        /* Source rating (report broken links) */
+        .source-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            position: relative;
+        }
+        .report-btn {
+            background: rgba(255,0,0,0.05);
+            border: 1px solid rgba(255,0,0,0.1);
+            color: #ef5350;
+            padding: 1px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            align-self: flex-end;
+            min-height: auto;
+            line-height: 1.5;
+        }
+        .report-btn:hover {
+            background: rgba(255,0,0,0.15);
+            transform: scale(1.05);
+        }
+        .report-btn.warn {
+            background: rgba(255,152,0,0.15);
+            border-color: rgba(255,152,0,0.3);
+            color: #ffa726;
+        }
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #323232;
+            color: #fff;
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+        .toast.show { opacity: 1; }
+
         /* PWA Install Banner */
         .install-banner {
             display: none;
@@ -1154,6 +1205,8 @@
         <button class="install-btn" id="installBtn">تثبيت</button>
         <button class="install-dismiss" id="installDismiss">✕</button>
     </div>
+
+    <div class="toast" id="toast"></div>
 
     <script>
         const GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
@@ -1701,6 +1754,8 @@
                 }
             });
         }
+
+        function shareMatch(id, btn) {
             const m = allMatches.find(x => x.id === id);
             if (!m) return;
             const scoreText = m.score1 !== null ? `📊 ${m.score1} - ${m.score2}` : '';
@@ -1717,6 +1772,48 @@ ${scoreText}
                     if (btn) { btn.textContent = '✅'; setTimeout(() => btn.textContent = '📤', 2000); }
                 }).catch(() => {});
             }
+        }
+
+        // === Source Rating (Report broken links) ===
+        const REPORTS_KEY = 'kora_src_reports';
+
+        function getSourceReports() {
+            try { return JSON.parse(localStorage.getItem(REPORTS_KEY) || '{}'); } catch(e) { return {}; }
+        }
+
+        function reportSource(mi, sk) {
+            const reports = getSourceReports();
+            const key = mi + '-' + sk;
+            reports[key] = (reports[key] || 0) + 1;
+            localStorage.setItem(REPORTS_KEY, JSON.stringify(reports));
+            return reports[key];
+        }
+
+        function getSourceReportCount(mi, sk) {
+            const reports = getSourceReports();
+            return reports[mi + '-' + sk] || 0;
+        }
+
+        function reportBtnHtml(mi, sk) {
+            const c = getSourceReportCount(mi, sk);
+            return `<button class="report-btn" onclick="event.stopPropagation();reportSourceClick(this,${mi},'${sk}')">🚫${c > 0 ? ' ' + c : ''}</button>`;
+        }
+
+        function reportSourceClick(btn, mi, sk) {
+            const count = reportSource(mi, sk);
+            btn.textContent = '🚫 ' + count;
+            btn.classList.add('warn');
+            showToast('✅ تم تسجيل بلاغك - ' + count + ' بلاغ');
+        }
+
+        let showToastTimer;
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(showToastTimer);
+            showToastTimer = setTimeout(() => el.classList.remove('show'), 2200);
         }
 
         let activeSection = 'today';
@@ -2038,14 +2135,14 @@ ${scoreText}
                             <span class="status-badge ${statusClass}">${statusMap[m.status] || m.statusText}</span>
                             ${m.channel ? `<span class="channel">📡 ${m.channel}</span>` : ''}
                             <div class="source-btns">
-                                ${m.embedUrl ? `<button class="stream-btn" data-index="${idx}" data-source="1">▶ المصدر 1</button>` : ''}
-                                ${m.embedUrl2 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#1976D2,#1565C0)" data-index="${idx}" data-source="2">▶ المصدر 2</button>` : ''}
-                                ${m.embedUrl3 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#388E3C,#2E7D32)" data-index="${idx}" data-source="3">▶ المصدر 3</button>` : ''}
-                                ${m.embedUrl4 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#7B1FA2,#6A1B9A)" data-index="${idx}" data-source="4">▶ المصدر 4</button>` : ''}
-                                ${m.embedUrl5 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#E65100,#BF360C)" data-index="${idx}" data-source="5">▶ المصدر 5</button>` : ''}
-                                ${m.m3u8 ? `<button class="stream-btn m3u8-source" data-index="${idx}" data-source="m3u8">▶ HLS 1</button>` : ''}
-                                ${m.m3u82 ? `<button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#00695C,#004D40)!important" data-index="${idx}" data-source="m3u82">▶ HLS 2</button>` : ''}
-                                ${m.m3u83 ? `<button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#4E342E,#3E2723)!important" data-index="${idx}" data-source="m3u83">▶ HLS 3</button>` : ''}
+                                ${m.embedUrl ? `<div class="source-item"><button class="stream-btn" data-index="${idx}" data-source="1">▶ المصدر 1</button>${reportBtnHtml(idx, '1')}</div>` : ''}
+                                ${m.embedUrl2 ? `<div class="source-item"><button class="stream-btn alt-source" style="background:linear-gradient(135deg,#1976D2,#1565C0)" data-index="${idx}" data-source="2">▶ المصدر 2</button>${reportBtnHtml(idx, '2')}</div>` : ''}
+                                ${m.embedUrl3 ? `<div class="source-item"><button class="stream-btn alt-source" style="background:linear-gradient(135deg,#388E3C,#2E7D32)" data-index="${idx}" data-source="3">▶ المصدر 3</button>${reportBtnHtml(idx, '3')}</div>` : ''}
+                                ${m.embedUrl4 ? `<div class="source-item"><button class="stream-btn alt-source" style="background:linear-gradient(135deg,#7B1FA2,#6A1B9A)" data-index="${idx}" data-source="4">▶ المصدر 4</button>${reportBtnHtml(idx, '4')}</div>` : ''}
+                                ${m.embedUrl5 ? `<div class="source-item"><button class="stream-btn alt-source" style="background:linear-gradient(135deg,#E65100,#BF360C)" data-index="${idx}" data-source="5">▶ المصدر 5</button>${reportBtnHtml(idx, '5')}</div>` : ''}
+                                ${m.m3u8 ? `<div class="source-item"><button class="stream-btn m3u8-source" data-index="${idx}" data-source="m3u8">▶ HLS 1</button>${reportBtnHtml(idx, 'm3u8')}</div>` : ''}
+                                ${m.m3u82 ? `<div class="source-item"><button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#00695C,#004D40)!important" data-index="${idx}" data-source="m3u82">▶ HLS 2</button>${reportBtnHtml(idx, 'm3u82')}</div>` : ''}
+                                ${m.m3u83 ? `<div class="source-item"><button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#4E342E,#3E2723)!important" data-index="${idx}" data-source="m3u83">▶ HLS 3</button>${reportBtnHtml(idx, 'm3u83')}</div>` : ''}
                             </div>
                         </div>
                     </div>`;
@@ -2100,14 +2197,14 @@ ${scoreText}
                     <div style="font-size:12px;color:#999;margin-bottom:8px;text-align:center;">${m.team1} vs ${m.team2}</div>
                     <div class="actions">
                         <div class="source-btns">
-                            ${m.embedUrl ? `<button class="stream-btn" data-index="${idx}" data-source="1">▶ 1</button>` : ''}
-                            ${m.embedUrl2 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#1976D2,#1565C0)" data-index="${idx}" data-source="2">▶ 2</button>` : ''}
-                            ${m.embedUrl3 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#388E3C,#2E7D32)" data-index="${idx}" data-source="3">▶ 3</button>` : ''}
-                            ${m.embedUrl4 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#7B1FA2,#6A1B9A)" data-index="${idx}" data-source="4">▶ 4</button>` : ''}
-                            ${m.embedUrl5 ? `<button class="stream-btn alt-source" style="background:linear-gradient(135deg,#E65100,#BF360C)" data-index="${idx}" data-source="5">▶ 5</button>` : ''}
-                            ${m.m3u8 ? `<button class="stream-btn m3u8-source" data-index="${idx}" data-source="m3u8">▶ H1</button>` : ''}
-                            ${m.m3u82 ? `<button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#00695C,#004D40)!important" data-index="${idx}" data-source="m3u82">▶ H2</button>` : ''}
-                            ${m.m3u83 ? `<button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#4E342E,#3E2723)!important" data-index="${idx}" data-source="m3u83">▶ H3</button>` : ''}
+                            ${m.embedUrl ? `<div class="source-item"><button class="stream-btn" data-index="${idx}" data-source="1">▶ 1</button>${reportBtnHtml(idx, '1')}</div>` : ''}
+                            ${m.embedUrl2 ? `<div class="source-item"><button class="stream-btn alt-source" style="background:linear-gradient(135deg,#1976D2,#1565C0)" data-index="${idx}" data-source="2">▶ 2</button>${reportBtnHtml(idx, '2')}</div>` : ''}
+                            ${m.embedUrl3 ? `<div class="source-item"><button class="stream-btn alt-source" style="background:linear-gradient(135deg,#388E3C,#2E7D32)" data-index="${idx}" data-source="3">▶ 3</button>${reportBtnHtml(idx, '3')}</div>` : ''}
+                            ${m.embedUrl4 ? `<div class="source-item"><button class="stream-btn alt-source" style="background:linear-gradient(135deg,#7B1FA2,#6A1B9A)" data-index="${idx}" data-source="4">▶ 4</button>${reportBtnHtml(idx, '4')}</div>` : ''}
+                            ${m.embedUrl5 ? `<div class="source-item"><button class="stream-btn alt-source" style="background:linear-gradient(135deg,#E65100,#BF360C)" data-index="${idx}" data-source="5">▶ 5</button>${reportBtnHtml(idx, '5')}</div>` : ''}
+                            ${m.m3u8 ? `<div class="source-item"><button class="stream-btn m3u8-source" data-index="${idx}" data-source="m3u8">▶ H1</button>${reportBtnHtml(idx, 'm3u8')}</div>` : ''}
+                            ${m.m3u82 ? `<div class="source-item"><button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#00695C,#004D40)!important" data-index="${idx}" data-source="m3u82">▶ H2</button>${reportBtnHtml(idx, 'm3u82')}</div>` : ''}
+                            ${m.m3u83 ? `<div class="source-item"><button class="stream-btn m3u8-source" style="background:linear-gradient(135deg,#4E342E,#3E2723)!important" data-index="${idx}" data-source="m3u83">▶ H3</button>${reportBtnHtml(idx, 'm3u83')}</div>` : ''}
                         </div>
                     </div>
                 </div>`;
