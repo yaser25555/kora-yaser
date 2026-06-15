@@ -222,7 +222,7 @@
         .time-bar .ampm { background: rgba(255,193,7,0.15); color: #ffc107; padding: 3px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1px solid rgba(255,193,7,0.25); }
         .time-bar .date { color: rgba(255,255,255,0.7); }
         .time-bar .badge { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; font-size: 13px; }
-        .theme-btn {
+        .theme-btn, .tz-btn {
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.1);
             color: #ffc107;
@@ -238,11 +238,68 @@
             font-family: inherit;
             flex-shrink: 0;
         }
-        .theme-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.1); }
-        [data-theme="light"] .theme-btn {
+        .theme-btn:hover, .tz-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.1); }
+        [data-theme="light"] .theme-btn, [data-theme="light"] .tz-btn {
             background: rgba(0,0,0,0.04);
             border-color: var(--clr-border);
             color: #f9a825;
+        }
+        /* Timezone Picker Modal */
+        .tz-modal {
+            background: var(--clr-modal);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 80vh;
+            max-height: 80dvh;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--clr-border2);
+            overflow: hidden;
+        }
+        .tz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: var(--clr-modal-hdr);
+            border-bottom: 1px solid var(--clr-border);
+            font-weight: 700;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .tz-list {
+            overflow-y: auto;
+            padding: 8px;
+            flex: 1;
+        }
+        .tz-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s;
+            border: none;
+            background: transparent;
+            color: var(--clr-text);
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            width: 100%;
+            text-align: right;
+        }
+        .tz-item:hover { background: var(--clr-surface3); }
+        .tz-item.active {
+            background: rgba(255,193,7,0.1);
+            color: #ffc107;
+        }
+        .tz-item .tz-offset {
+            color: var(--clr-text2);
+            font-size: 12px;
+            font-weight: 400;
+            margin-right: auto;
         }
 
         /* Live Bar */
@@ -1316,6 +1373,7 @@
             <span class="ampm" id="amPm">--</span>
             <span class="date" id="saudiDate">--</span>
             <span class="badge">🇸🇦 السعودية</span>
+            <button class="tz-btn" id="tzBtn" onclick="toggleTzPicker()" title="المنطقة الزمنية">🕐</button>
             <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="الوضع النهاري/الليلي">🌙</button>
         </div>
 
@@ -1395,6 +1453,17 @@
 
     <div class="toast" id="toast"></div>
 
+    <!-- Timezone Picker Overlay -->
+    <div class="modal-overlay" id="tzOverlay">
+        <div class="tz-modal">
+            <div class="tz-header">
+                <span>🕐 اختر المنطقة الزمنية</span>
+                <button class="modal-close" onclick="closeTzPicker()">✕</button>
+            </div>
+            <div class="tz-list" id="tzList"></div>
+        </div>
+    </div>
+
     <script>
         const GROUPS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
         const GROUP_NAMES = {
@@ -1406,39 +1475,124 @@
         let allMatches = [];
         let activeFilter = 'today';
 
-        function getSaudiTodayStr() {
+        // === Timezone ===
+        const TZ_LIST = [
+            { label: '🇸🇦 الرياض (المملكة)', offset: 180, iana: 'Asia/Riyadh', city: 'Riyadh' },
+            { label: '🇰🇼 الكويت',           offset: 180, iana: 'Asia/Kuwait', city: 'Kuwait' },
+            { label: '🇶🇦 الدوحة (قطر)',     offset: 180, iana: 'Asia/Qatar', city: 'Doha' },
+            { label: '🇮🇶 بغداد (العراق)',   offset: 180, iana: 'Asia/Baghdad', city: 'Baghdad' },
+            { label: '🇦🇪 دبي (الإمارات)',   offset: 240, iana: 'Asia/Dubai', city: 'Dubai' },
+            { label: '🇮🇷 طهران (إيران)',    offset: 210, iana: 'Asia/Tehran', city: 'Tehran' },
+            { label: '🇪🇬 القاهرة (مصر)',    offset: 120, iana: 'Africa/Cairo', city: 'Cairo' },
+            { label: '🇱🇧 بيروت (لبنان)',    offset: 120, iana: 'Asia/Beirut', city: 'Beirut' },
+            { label: '🇯🇴 عمان (الأردن)',    offset: 120, iana: 'Asia/Amman', city: 'Amman' },
+            { label: '🇸🇾 دمشق (سوريا)',     offset: 120, iana: 'Asia/Damascus', city: 'Damascus' },
+            { label: '🇵🇸 القدس (فلسطين)',   offset: 120, iana: 'Asia/Hebron', city: 'Hebron' },
+            { label: '🇹🇷 إسطنبول (تركيا)',  offset: 180, iana: 'Europe/Istanbul', city: 'Istanbul' },
+            { label: '🇸🇩 الخرطوم (السودان)', offset: 120, iana: 'Africa/Khartoum', city: 'Khartoum' },
+            { label: '🇾🇪 عدن (اليمن)',      offset: 180, iana: 'Asia/Aden', city: 'Aden' },
+            { label: '🇲🇦 الدار البيضاء (المغرب)', offset: 60, iana: 'Africa/Casablanca', city: 'Casablanca' },
+            { label: '🇩🇿 الجزائر',          offset: 60,  iana: 'Africa/Algiers', city: 'Algiers' },
+            { label: '🇹🇳 تونس',             offset: 60,  iana: 'Africa/Tunis', city: 'Tunis' },
+            { label: '🇬🇧 لندن (بريطانيا)',  offset: 60,  iana: 'Europe/London', city: 'London' },
+            { label: '🇪🇺 برلين (ألمانيا)',  offset: 120, iana: 'Europe/Berlin', city: 'Berlin' },
+            { label: '🇫🇷 باريس (فرنسا)',    offset: 120, iana: 'Europe/Paris', city: 'Paris' },
+            { label: '🇮🇹 روما (إيطاليا)',   offset: 120, iana: 'Europe/Rome', city: 'Rome' },
+            { label: '🇪🇸 مدريد (إسبانيا)',  offset: 120, iana: 'Europe/Madrid', city: 'Madrid' },
+            { label: '🇺🇸 نيويورك',          offset: -240, iana: 'America/New_York', city: 'New York' },
+            { label: '🇺🇸 واشنطن',           offset: -240, iana: 'America/New_York', city: 'Washington' },
+            { label: '🇨🇦 تورونتو',          offset: -240, iana: 'America/Toronto', city: 'Toronto' },
+            { label: '🇺🇸 شيكاغو',           offset: -300, iana: 'America/Chicago', city: 'Chicago' },
+            { label: '🇺🇸 دنفر',             offset: -360, iana: 'America/Denver', city: 'Denver' },
+            { label: '🇺🇸 لوس أنجلوس',       offset: -420, iana: 'America/Los_Angeles', city: 'Los Angeles' },
+            { label: '🇧🇷 ساو باولو (البرازيل)', offset: -180, iana: 'America/Sao_Paulo', city: 'Sao Paulo' },
+            { label: '🇦🇷 بوينس آيرس (الأرجنتين)', offset: -180, iana: 'America/Argentina/Buenos_Aires', city: 'Buenos Aires' },
+            { label: '🇦🇺 سيدني (أستراليا)', offset: 660, iana: 'Australia/Sydney', city: 'Sydney' },
+            { label: '🇯🇵 طوكيو (اليابان)',  offset: 540, iana: 'Asia/Tokyo', city: 'Tokyo' },
+            { label: '🇨🇳 بكين (الصين)',     offset: 480, iana: 'Asia/Shanghai', city: 'Shanghai' },
+            { label: '🇮🇳 نيودلهي (الهند)',  offset: 330, iana: 'Asia/Kolkata', city: 'Kolkata' },
+        ];
+        const TZ_KEY = 'kora_tz';
+
+        function getUserTz() {
+            try { const s = localStorage.getItem(TZ_KEY); return s ? JSON.parse(s) : TZ_LIST[0]; }
+            catch(e) { return TZ_LIST[0]; }
+        }
+
+        function saveUserTz(tz) {
+            localStorage.setItem(TZ_KEY, JSON.stringify(tz));
+        }
+
+        function getTodayStr(tzIana) {
             const now = new Date();
             const formatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: 'Asia/Riyadh',
-                year: 'numeric',
-                month: 'numeric',
-                day: 'numeric'
+                timeZone: tzIana || getUserTz().iana,
+                year: 'numeric', month: 'numeric', day: 'numeric'
             });
             const parts = formatter.formatToParts(now);
             const p = {};
-            parts.forEach(part => {
-                p[part.type] = part.value;
-            });
+            parts.forEach(part => { p[part.type] = part.value; });
             return p.year + '-' + String(p.month).padStart(2, '0') + '-' + String(p.day).padStart(2, '0');
+        }
+
+        // Convert AST (Saudi time, UTC+3) to user's selected timezone
+        function astToUser(astTime, astDate, userOffset) {
+            if (!astTime || !astDate) return { time: astTime || '--:--', label: '', date: astDate || '' };
+            const diff = userOffset - 180;
+            if (diff === 0) {
+                const h = parseInt(astTime);
+                const lbl = h >= 0 && h < 5 ? 'فجرًا' : h < 12 ? 'صباحًا' : h < 13 ? 'ظهرًا' : h < 17 ? 'بعد الظهر' : h < 21 ? 'مساءً' : 'ليلاً';
+                return { time: astTime, label: lbl, date: astDate };
+            }
+            const [h, m] = astTime.split(':').map(Number);
+            let newH = h + diff;
+            let dayOff = 0;
+            if (newH >= 24) { newH -= 24; dayOff = 1; }
+            if (newH < 0) { newH += 24; dayOff = -1; }
+            const lbl = newH >= 0 && newH < 5 ? 'فجرًا' : newH < 12 ? 'صباحًا' : newH < 13 ? 'ظهرًا' : newH < 17 ? 'بعد الظهر' : newH < 21 ? 'مساءً' : 'ليلاً';
+            let newDate = astDate;
+            if (dayOff !== 0) {
+                const dp = astDate.split('-').map(Number);
+                const d = new Date(Date.UTC(dp[0], dp[1] - 1, dp[2] + dayOff));
+                newDate = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+            }
+            return { time: String(newH).padStart(2, '0') + ':' + String(m).padStart(2, '0'), label: lbl, date: newDate };
+        }
+
+        // Cache display-adjusted values per match
+        function dm(m) {
+            if (!m._dm) {
+                const tz = getUserTz();
+                m._dm = astToUser(m.timeAst, m.dateAst || m.date, tz.offset);
+                m._dm.id = m.id; m._dm.score1 = m.score1; m._dm.score2 = m.score2;
+                m._dm.team1En = m.team1En; m._dm.team2En = m.team2En;
+                m._dm.team1Ar = m.team1Ar; m._dm.team2Ar = m.team2Ar;
+                m._dm.group = m.group; m._dm.stadium = m.stadium;
+                m._dm.timeAst = m.timeAst; m._dm.dateAst = m.dateAst || m.date;
+            }
+            return m._dm;
+        }
+
+        // Clear display cache (when TZ changes)
+        function clearDmCache() {
+            allMatches.forEach(m => delete m._dm);
+        }
+
+        function getSaudiTodayStr() {
+            return getTodayStr();
         }
 
         function updateClock() {
             const now = new Date();
+            const tz = getUserTz();
             const formatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: 'Asia/Riyadh',
-                year: 'numeric',
-                month: 'numeric',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: 'numeric',
-                second: 'numeric',
-                hour12: false
+                timeZone: tz.iana,
+                year: 'numeric', month: 'numeric', day: 'numeric',
+                hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false
             });
             const parts = formatter.formatToParts(now);
             const p = {};
-            parts.forEach(part => {
-                p[part.type] = part.value;
-            });
+            parts.forEach(part => { p[part.type] = part.value; });
 
             const h = parseInt(p.hour);
             const m = parseInt(p.minute);
@@ -1453,10 +1607,7 @@
                 String(h12).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
             document.getElementById('amPm').textContent = ampm;
 
-            const dayFormatter = new Intl.DateTimeFormat('ar-SA', {
-                timeZone: 'Asia/Riyadh',
-                weekday: 'long'
-            });
+            const dayFormatter = new Intl.DateTimeFormat('ar-SA', { timeZone: tz.iana, weekday: 'long' });
             const weekdayName = dayFormatter.format(now);
 
             const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -1513,13 +1664,13 @@
         }
 
         function isToday(m) {
-            const dateStr = m.dateAst || m.date;
-            return dateStr === getSaudiTodayStr();
+            const dateStr = dm(m).date;
+            return dateStr === getTodayStr();
         }
 
         function todayMatches(matches) {
-            const todayStr = getSaudiTodayStr();
-            return matches.filter(m => (m.dateAst || m.date) === todayStr);
+            const todayStr = getTodayStr();
+            return matches.filter(m => dm(m).date === todayStr);
         }
 
         function renderMatches(matches, activeGroup) {
@@ -1561,7 +1712,7 @@
                     favMatches.sort((a, b) => a.timeAst.localeCompare(b.timeAst)).forEach(m => {
                         const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
                         html += `<tr class="today-row fav-row">`;
-                        html += `<td><span class="time-ast">${to12h(m.timeAst)}</span><br><span class="time-label">${m.timeLabel}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
+                        html += `<td><span class="time-ast">${to12h(dm(m).time)}</span><br><span class="time-label">${dm(m).label}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
                         html += `<td><span class="group-badge">${m.group}</span></td>`;
                         html += `<td class="match-teams">${favStar(m.team1En, true)} <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar} <span class="vs">vs</span> ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span> ${favStar(m.team2En, true)}</td>`;
                         html += `<td class="score-cell ${m.score1 !== null ? 'has-score' : 'no-score'}">`;
@@ -1585,7 +1736,7 @@
                                 ${favStar(m.team2En, true)}
                             </div>
                             <div class="mc-info">
-                                <span class="mc-time">${to12h(m.timeAst)} ${m.timeLabel}</span>
+                                <span class="mc-time">${to12h(dm(m).time)} ${dm(m).label}</span>
                                 <span class="group-badge" style="font-size:11px;background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:10px;">${m.group}</span>
                                 <span class="mc-score ${m.score1 !== null ? 'has-score' : ''}">${scoreDisplay}</span>
                                 <span class="status-badge ${status}">${getStatusText(status)}</span>
@@ -1598,7 +1749,7 @@
 
                 html += `<div class="group-section">`;
                 html += `<div class="group-header open">`;
-                html += `<span>📅 مباريات اليوم (${formatDate(getSaudiTodayStr())})</span>`;
+                html += `<span>📅 مباريات اليوم (${formatDate(getTodayStr())})</span>`;
                 html += `<span class="count">${filtered.length} مباراة</span>`;
                 html += `</div>`;
                 html += `<div class="group-body open"><div class="table-wrap"><table><thead><tr>`;
@@ -1608,7 +1759,7 @@
                 filtered.sort((a, b) => a.timeAst.localeCompare(b.timeAst)).forEach(m => {
                     const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
                     html += `<tr class="today-row">`;
-                    html += `<td><span class="time-ast">${to12h(m.timeAst)}</span><br><span class="time-label">${m.timeLabel}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
+                    html += `<td><span class="time-ast">${to12h(dm(m).time)}</span><br><span class="time-label">${dm(m).label}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
                     html += `<td><span class="group-badge">${m.group}</span></td>`;
                     html += `<td class="match-teams">
                         ${favStar(m.team1En, isFavorite(m.team1En))}
@@ -1643,7 +1794,7 @@
                             ${favStar(m.team2En, isFavorite(m.team2En))}
                         </div>
                         <div class="mc-info">
-                            <span class="mc-time">${to12h(m.timeAst)} ${m.timeLabel}</span>
+                            <span class="mc-time">${to12h(dm(m).time)} ${dm(m).label}</span>
                             <span class="group-badge" style="font-size:11px;background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:10px;">${m.group}</span>
                             <span class="mc-score ${m.score1 !== null ? 'has-score' : ''}">${scoreDisplay}</span>
                             <span class="status-badge ${status}">${statusText}</span>
@@ -1686,8 +1837,8 @@
                         const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
                         const isTodayMatch = isToday(m);
                         html += `<tr class="${isTodayMatch ? 'today-row' : ''}">`;
-                        html += `<td class="date-cell">${formatDate(m.dateAst || m.date)}</td>`;
-                        html += `<td><span class="time-ast">${to12h(m.timeAst)}</span><br><span class="time-label">${m.timeLabel}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
+                        html += `<td class="date-cell">${formatDate(dm(m).date)}</td>`;
+                        html += `<td><span class="time-ast">${to12h(dm(m).time)}</span><br><span class="time-label">${dm(m).label}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
                         html += `<td class="match-teams">
                             ${favStar(m.team1En, isFavorite(m.team1En))}
                             <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
@@ -1714,7 +1865,7 @@
                         const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
                         const statusText = getStatusText(status);
                         const scoreDisplay = m.score1 !== null ? `${m.score1} - ${m.score2}` : '⚽';
-                        const dateStr = formatDate(m.dateAst || m.date);
+                        const dateStr = formatDate(dm(m).date);
                         if (dateStr !== prevDate) {
                             html += `<div class="day-label">${dateStr}</div>`;
                             prevDate = dateStr;
@@ -1728,7 +1879,7 @@
                                 ${favStar(m.team2En, isFavorite(m.team2En))}
                             </div>
                             <div class="mc-info">
-                                <span class="mc-time">${to12h(m.timeAst)} ${m.timeLabel}</span>
+                                <span class="mc-time">${to12h(dm(m).time)} ${dm(m).label}</span>
                                 <span style="font-size:11px;color:#888;">${m.stadium}</span>
                                 <span class="mc-score ${m.score1 !== null ? 'has-score' : ''}">${scoreDisplay}</span>
                                 <span class="status-badge ${status}">${statusText}</span>
@@ -1948,7 +2099,7 @@
             const scoreText = m.score1 !== null ? `📊 ${m.score1} - ${m.score2}` : '';
             const text = `🏆 كأس العالم 2026
 ${m.team1Ar} 🆚 ${m.team2Ar}
-⏰ ${m.dateAst || m.date} - ${to12h(m.timeAst)} ${m.timeLabel}
+⏰ ${dm(m).date} - ${to12h(dm(m).time)} ${dm(m).label}
 ${scoreText}
 📍 ${m.stadium}
 🔗 https://kora-yaser.web.app`;
@@ -2513,6 +2664,53 @@ ${scoreText}
             localStorage.setItem(THEME_KEY, next);
             document.getElementById('themeBtn').textContent = next === 'light' ? '☀️' : '🌙';
         }
+
+        // === Timezone picker ===
+        function toggleTzPicker() {
+            const overlay = document.getElementById('tzOverlay');
+            const open = overlay.classList.contains('open');
+            if (!open) renderTzList();
+            overlay.classList.toggle('open');
+            document.body.style.overflow = open ? '' : 'hidden';
+        }
+
+        function closeTzPicker() {
+            document.getElementById('tzOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function renderTzList() {
+            const list = document.getElementById('tzList');
+            const current = getUserTz();
+            list.innerHTML = TZ_LIST.map((tz, i) => {
+                const active = tz.city === current.city && tz.offset === current.offset;
+                const sign = tz.offset >= 0 ? '+' : '';
+                return `<button class="tz-item${active ? ' active' : ''}" onclick="selectTz(${i})">
+                    ${tz.label}
+                    <span class="tz-offset">UTC${sign}${tz.offset / 60}</span>
+                </button>`;
+            }).join('');
+        }
+
+        function selectTz(index) {
+            const tz = TZ_LIST[index];
+            saveUserTz(tz);
+            clearDmCache();
+            closeTzPicker();
+            // Refresh all sections
+            if (activeSection === 'today') renderMatches(allMatches, 'today');
+            else if (activeSection === 'groups') renderMatches(allMatches, activeGroupFilter);
+            updateClock();
+            renderLiveBar();
+            showToast('✅ تم تغيير المنطقة الزمنية إلى ' + tz.label.split(' ').slice(1).join(' '));
+        }
+
+        // Close tz picker on overlay click
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('#tzOverlay') && !e.target.closest('.tz-modal')) {
+                closeTzPicker();
+            }
+        });
 
         applyTheme();
 
