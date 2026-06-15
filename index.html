@@ -727,6 +727,89 @@
         .notify-select { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px 6px; font-size: clamp(10px,0.9vw,12px); font-family: inherit; cursor: pointer; outline: none; }
         .notify-select option { background: #1a1a2e; color: #fff; }
 
+        /* Standings Table */
+        .standings-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .standings-table {
+            min-width: 500px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .standings-table th {
+            background: rgba(0,0,0,0.25);
+            padding: 8px 10px;
+            font-size: 12px;
+            color: #90a4ae;
+            font-weight: 700;
+            text-align: center;
+        }
+        .standings-table td {
+            padding: 10px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            text-align: center;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .standings-table .team-cell {
+            text-align: right;
+            font-weight: 700;
+            min-width: 120px;
+            white-space: nowrap;
+        }
+        .standings-table .team-cell .flag {
+            font-size: 18px;
+            margin-left: 6px;
+        }
+        .standings-table .gd-cell.pos { color: #4CAF50; font-weight: 700; }
+        .standings-table .gd-cell.neg { color: #f44336; font-weight: 700; }
+        .standings-table .pts-cell { font-size: 16px; color: #ffc107; }
+        .standings-table tr.qualified {
+            background: rgba(76, 175, 80, 0.06) !important;
+        }
+        .standings-table tr.qualified td:first-child {
+            border-right: 3px solid #4CAF50;
+        }
+        @media (max-width: 600px) {
+            .standings-wrap { padding: 8px 10px; }
+            .standings-table td { font-size: 12px; padding: 8px 6px; }
+            .standings-table th { font-size: 11px; padding: 6px; }
+            .standings-table .team-cell { min-width: 90px; font-size: 12px; }
+            .standings-table .team-cell .flag { font-size: 15px; }
+            .standings-table .pts-cell { font-size: 14px; }
+        }
+
+        /* Group sub-tabs for standings/matches toggle */
+        .group-sub-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 8px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            background: rgba(0,0,0,0.1);
+        }
+        .group-sub-tab {
+            padding: 6px 16px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: #90a4ae;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .group-sub-tab.active {
+            background: rgba(255,193,7,0.12);
+            color: #ffc107;
+        }
+        .group-sub-tab:hover { color: #fff; }
+        .group-sub-content { display: none; }
+        .group-sub-content.active { display: block; }
+
         /* PWA Install Banner */
         .install-banner {
             display: none;
@@ -970,7 +1053,7 @@
             regs.forEach(reg => reg.update());
         });
         caches.keys().then(keys => {
-            keys.forEach(k => { if (k !== 'worldcup2026-v13') caches.delete(k); });
+            keys.forEach(k => { if (k !== 'worldcup2026-v14') caches.delete(k); });
         });
     }
     </script>
@@ -1340,7 +1423,22 @@
                     html += `<span><span class="toggle-icon">▶</span> ${GROUP_NAMES[g] || 'المجموعة ' + g}</span>`;
                     html += `<span class="count">${todayCount > 0 ? '🔴 ' + todayCount + ' اليوم · ' : ''}${matchesInGroup.length} مباريات</span>`;
                     html += `</div>`;
-                    html += `<div class="group-body${openDefault ? ' open' : ''}"><div class="table-wrap"><table><thead><tr>`;
+                    const standings = getGroupStandings(g);
+                    const hasStandings = standings.length > 0;
+
+                    html += `<div class="group-body${openDefault ? ' open' : ''}">`;
+
+                    // Sub-tabs: الترتيب and المباريات
+                    if (hasStandings) {
+                        html += `<div class="group-sub-tabs">
+                            <button class="group-sub-tab active" onclick="switchGroupSubTab(this,'standings')">📊 الترتيب</button>
+                            <button class="group-sub-tab" onclick="switchGroupSubTab(this,'matches')">📅 المباريات</button>
+                        </div>`;
+                        html += `<div class="group-sub-content active" id="gs-${g}">${renderStandingsHtml(standings)}${renderStandingsCards(standings)}</div>`;
+                        html += `<div class="group-sub-content" id="gm-${g}">`;
+                    }
+
+                    html += `<div class="table-wrap"><table><thead><tr>`;
                     html += `<th>التاريخ</th><th>التوقيت (السعودية)</th><th>المباراة</th><th>النتيجة</th><th>الملعب</th><th>الحالة</th><th style="width:40px;"></th>`;
                     html += `</tr></thead><tbody>`;
 
@@ -1398,7 +1496,10 @@
                             </div>
                         </div>`;
                     });
-                    html += `</div></div></div>`;
+                    html += `</div>`;
+
+                    if (hasStandings) { html += `</div>`; }  // close gm-{g} wrapper
+                    html += `</div></div>`;
                 });
             }
 
@@ -1418,6 +1519,79 @@
             const monthIndex = parseInt(parts[1], 10) - 1;
             const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
             return day + ' ' + (months[monthIndex] || '');
+        }
+
+        // === Group Standings ===
+        function getGroupStandings(group) {
+            const matches = allMatches.filter(m => m.group === group && m.score1 !== null);
+            const teams = {};
+            matches.forEach(m => {
+                if (!teams[m.team1En]) {
+                    teams[m.team1En] = { teamAr: m.team1Ar, teamEn: m.team1En, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 };
+                }
+                if (!teams[m.team2En]) {
+                    teams[m.team2En] = { teamAr: m.team2Ar, teamEn: m.team2En, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 };
+                }
+            });
+            matches.forEach(m => {
+                const t1 = teams[m.team1En];
+                const t2 = teams[m.team2En];
+                if (!t1 || !t2) return;
+                t1.played++; t2.played++;
+                t1.gf += m.score1; t1.ga += m.score2;
+                t2.gf += m.score2; t2.ga += m.score1;
+                if (m.score1 > m.score2) {
+                    t1.won++; t1.pts += 3; t2.lost++;
+                } else if (m.score1 < m.score2) {
+                    t2.won++; t2.pts += 3; t1.lost++;
+                } else {
+                    t1.drawn++; t1.pts++; t2.drawn++; t2.pts++;
+                }
+            });
+            return Object.values(teams)
+                .map(t => ({ ...t, gd: t.gf - t.ga }))
+                .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+        }
+
+        function renderStandingsHtml(standings) {
+            if (!standings || standings.length === 0) return '';
+            let html = `<div class="standings-wrap"><table class="standings-table">
+                <thead><tr>
+                    <th>#</th><th>المنتخب</th><th>لعب</th><th>فاز</th><th>ت</th><th>خسر</th>
+                    <th>له</th><th>عليه</th><th>الفرق</th><th>النقاط</th>
+                </tr></thead><tbody>`;
+            standings.forEach((t, i) => {
+                html += `<tr class="${i < 2 ? 'qualified' : ''}">
+                    <td>${i + 1}</td>
+                    <td class="team-cell"><span class="flag">${getFlag(t.teamEn)}</span> ${t.teamAr}</td>
+                    <td>${t.played}</td><td>${t.won}</td><td>${t.drawn}</td><td>${t.lost}</td>
+                    <td>${t.gf}</td><td>${t.ga}</td>
+                    <td class="gd-cell ${t.gd > 0 ? 'pos' : t.gd < 0 ? 'neg' : ''}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+                    <td class="pts-cell"><strong>${t.pts}</strong></td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+            return html;
+        }
+
+        function renderStandingsCards(standings) {
+            if (!standings || standings.length === 0) return '';
+            let html = `<div style="padding:12px 16px;display:grid;gap:8px;">`;
+            standings.forEach((t, i) => {
+                const highlight = i < 2 ? 'rgba(76,175,80,0.08)' : 'transparent';
+                html += `<div style="display:flex;align-items:center;gap:8px;background:${highlight};border-radius:8px;padding:8px 12px;border-right:3px solid ${i<2?'#4CAF50':'transparent'};">
+                    <span style="font-weight:800;color:#90a4ae;min-width:24px;">${i+1}</span>
+                    <span class="flag" style="font-size:20px;">${getFlag(t.teamEn)}</span>
+                    <span style="font-weight:700;flex:1;">${t.teamAr}</span>
+                    <span style="color:#888;font-size:12px;">لعب ${t.played}</span>
+                    <span style="font-weight:700;">${t.won}-${t.drawn}-${t.lost}</span>
+                    <span style="color:#90a4ae;font-size:12px;">${t.gf}:${t.ga}</span>
+                    <span class="gd-cell ${t.gd > 0 ? 'pos' : t.gd < 0 ? 'neg' : ''}" style="font-size:13px;min-width:32px;text-align:center;font-weight:700;">${t.gd > 0 ? '+' : ''}${t.gd}</span>
+                    <span style="font-weight:800;color:#ffc107;font-size:15px;min-width:28px;text-align:center;">${t.pts}</span>
+                </div>`;
+            });
+            html += `</div>`;
+            return html;
         }
 
         function getFlag(team) {
@@ -1590,6 +1764,16 @@ ${scoreText}
                 btn.classList.toggle('active', isMatch);
             });
             renderMatches(allMatches, group);
+        }
+
+        function switchGroupSubTab(btn, tab) {
+            const parent = btn.closest('.group-body');
+            if (!parent) return;
+            parent.querySelectorAll('.group-sub-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            const contents = parent.querySelectorAll('.group-sub-content');
+            const idx = tab === 'standings' ? 0 : contents.length - 1;
+            contents.forEach((c, i) => c.classList.toggle('active', i === idx));
         }
 
         function toggleGroup(el) {
