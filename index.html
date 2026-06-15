@@ -715,6 +715,15 @@
         .source-btns .stream-btn { white-space: normal; font-size: clamp(11px, 1.1vw, 13px); padding: 10px 8px; min-height: 38px; }
         .channel-card { padding: 16px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); margin-bottom: 10px; }
         .channel-title { font-size: clamp(14px, 1.4vw, 18px); font-weight: 800; color: #4FC3F7; text-align: center; margin-bottom: 4px; }
+        .fav-star { cursor: pointer; font-size: clamp(14px, 1.3vw, 18px); user-select: none; display: inline-block; transition: transform 0.15s; vertical-align: middle; }
+        .fav-star:hover { transform: scale(1.3); }
+        .fav-star.active { animation: favPop 0.3s ease; }
+        @keyframes favPop { 0%{transform:scale(1)} 50%{transform:scale(1.4)} 100%{transform:scale(1)} }
+        .fav-section .group-header { position: relative; overflow: hidden; }
+        .fav-section .group-header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,215,0,0.06) 0%, transparent 70%); }
+        .fav-row { background: rgba(255,215,0,0.03) !important; }
+        .fav-row:hover { background: rgba(255,215,0,0.07) !important; }
+        .fav-mc { border: 1px solid rgba(255,215,0,0.2) !important; }
 
         /* PWA Install Banner */
         .install-banner {
@@ -1205,6 +1214,56 @@
             let html = '';
 
             if (activeGroup === 'today') {
+                // Favorites section
+                const favTeams = getFavorites();
+                const favMatches = filtered.filter(m => favTeams.includes(m.team1En) || favTeams.includes(m.team2En));
+                if (favMatches.length > 0) {
+                    html += `<div class="group-section fav-section">`;
+                    html += `<div class="group-header open" style="background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,193,7,0.05));border-bottom:1px solid rgba(255,215,0,0.2);">`;
+                    html += `<span>⭐ مبارياتي</span>`;
+                    html += `<span class="count">${favMatches.length} مباراة</span>`;
+                    html += `</div>`;
+                    html += `<div class="group-body open"><div class="table-wrap"><table><thead><tr>`;
+                    html += `<th>التوقيت</th><th>المجموعة</th><th>المباراة</th><th>النتيجة</th><th>الملعب</th><th>الحالة</th><th style="width:40px;"></th>`;
+                    html += `</tr></thead><tbody>`;
+                    favMatches.sort((a, b) => a.timeAst.localeCompare(b.timeAst)).forEach(m => {
+                        const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
+                        html += `<tr class="today-row fav-row">`;
+                        html += `<td><span class="time-ast">${to12h(m.timeAst)}</span><br><span class="time-label">${m.timeLabel}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
+                        html += `<td><span class="group-badge">${m.group}</span></td>`;
+                        html += `<td class="match-teams">${favStar(m.team1En, true)} <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar} <span class="vs">vs</span> ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span> ${favStar(m.team2En, true)}</td>`;
+                        html += `<td class="score-cell ${m.score1 !== null ? 'has-score' : 'no-score'}">`;
+                        html += m.score1 !== null ? `${m.score1} - ${m.score2}` : `- : -`;
+                        html += `</td>`;
+                        html += `<td class="stadium-cell">${m.stadium}</td>`;
+                        html += `<td><span class="status-badge ${status}">${getStatusText(status)}</span></td>`;
+                        html += `<td><button class="share-btn" onclick="shareMatch(${m.id},this)" title="مشاركة">📤</button></td>`;
+                        html += `</tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                    html += `<div class="card-grid">`;
+                    favMatches.sort((a, b) => a.timeAst.localeCompare(b.timeAst)).forEach(m => {
+                        const status = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
+                        const scoreDisplay = m.score1 !== null ? `${m.score1} - ${m.score2}` : '⚽';
+                        html += `<div class="mc fav-mc">
+                            <div class="mc-teams">
+                                ${favStar(m.team1En, true)} <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
+                                <span class="vs">vs</span>
+                                ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span>
+                                ${favStar(m.team2En, true)}
+                            </div>
+                            <div class="mc-info">
+                                <span class="mc-time">${to12h(m.timeAst)} ${m.timeLabel}</span>
+                                <span class="group-badge" style="font-size:11px;background:rgba(255,255,255,0.08);padding:2px 8px;border-radius:10px;">${m.group}</span>
+                                <span class="mc-score ${m.score1 !== null ? 'has-score' : ''}">${scoreDisplay}</span>
+                                <span class="status-badge ${status}">${getStatusText(status)}</span>
+                                <button class="share-btn" onclick="shareMatch(${m.id},this)" title="مشاركة">📤</button>
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div></div></div>`;
+                }
+
                 html += `<div class="group-section">`;
                 html += `<div class="group-header open">`;
                 html += `<span>📅 مباريات اليوم (${formatDate(getSaudiTodayStr())})</span>`;
@@ -1220,9 +1279,11 @@
                     html += `<td><span class="time-ast">${to12h(m.timeAst)}</span><br><span class="time-label">${m.timeLabel}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
                     html += `<td><span class="group-badge">${m.group}</span></td>`;
                     html += `<td class="match-teams">
+                        ${favStar(m.team1En, isFavorite(m.team1En))}
                         <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
                         <span class="vs">vs</span>
                         ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span>
+                        ${favStar(m.team2En, isFavorite(m.team2En))}
                     </td>`;
                     html += `<td class="score-cell ${m.score1 !== null ? 'has-score' : 'no-score'}">`;
                     html += m.score1 !== null ? `${m.score1} - ${m.score2}` : `- : -`;
@@ -1243,9 +1304,11 @@
                     const scoreDisplay = m.score1 !== null ? `${m.score1} - ${m.score2}` : '⚽';
                     html += `<div class="mc">
                         <div class="mc-teams">
+                            ${favStar(m.team1En, isFavorite(m.team1En))}
                             <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
                             <span class="vs">vs</span>
                             ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span>
+                            ${favStar(m.team2En, isFavorite(m.team2En))}
                         </div>
                         <div class="mc-info">
                             <span class="mc-time">${to12h(m.timeAst)} ${m.timeLabel}</span>
@@ -1279,9 +1342,11 @@
                         html += `<td class="date-cell">${formatDate(m.dateAst || m.date)}</td>`;
                         html += `<td><span class="time-ast">${to12h(m.timeAst)}</span><br><span class="time-label">${m.timeLabel}</span><br><span class="countdown" data-date="${m.dateAst || m.date}" data-time="${m.timeAst}"></span></td>`;
                         html += `<td class="match-teams">
+                            ${favStar(m.team1En, isFavorite(m.team1En))}
                             <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
                             <span class="vs">vs</span>
                             ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span>
+                            ${favStar(m.team2En, isFavorite(m.team2En))}
                         </td>`;
                         html += `<td class="score-cell ${m.score1 !== null ? 'has-score' : 'no-score'}">`;
                         html += m.score1 !== null ? `${m.score1} - ${m.score2}` : `- : -`;
@@ -1309,9 +1374,11 @@
                         }
                         html += `<div class="mc ${isToday(m) ? 'today-row' : ''}">
                             <div class="mc-teams">
+                                ${favStar(m.team1En, isFavorite(m.team1En))}
                                 <span class="flag">${getFlag(m.team1En)}</span> ${m.team1Ar}
                                 <span class="vs">vs</span>
                                 ${m.team2Ar} <span class="flag">${getFlag(m.team2En)}</span>
+                                ${favStar(m.team2En, isFavorite(m.team2En))}
                             </div>
                             <div class="mc-info">
                                 <span class="mc-time">${to12h(m.timeAst)} ${m.timeLabel}</span>
@@ -1360,6 +1427,37 @@
                 'England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Croatia':'🇭🇷','Ghana':'🇬🇭','Panama':'🇵🇦'
             };
             return flags[team] || '🏳️';
+        }
+
+        // === Favorites ===
+        const FAV_KEY = 'kora_favs';
+
+        function getFavorites() {
+            try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch(e) { return []; }
+        }
+
+        function saveFavorites(favs) {
+            localStorage.setItem(FAV_KEY, JSON.stringify(favs));
+        }
+
+        function toggleFavorite(teamEn) {
+            let favs = getFavorites();
+            if (favs.includes(teamEn)) {
+                favs = favs.filter(t => t !== teamEn);
+            } else {
+                favs.push(teamEn);
+            }
+            saveFavorites(favs);
+            return favs.includes(teamEn);
+        }
+
+        function isFavorite(teamEn) {
+            return getFavorites().includes(teamEn);
+        }
+
+        function favStar(teamEn, isFav) {
+            const reRender = "renderMatches(allMatches, activeSection==='today'?'today':activeGroupFilter)";
+            return `<span class="fav-star ${isFav ? 'active' : ''}" data-team="${teamEn}" onclick="event.stopPropagation();this.classList.toggle('active');toggleFavorite('${teamEn}');${reRender}">${isFav ? '⭐' : '☆'}</span>`;
         }
 
         function shareMatch(id, btn) {
