@@ -1,14 +1,13 @@
 {
   "hosting": {
-    "public": ".",
+    "public": "dist",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
       "scripts/**",
       "data/**",
-      "README.md",
-      "404.html"
+      "README.md"
     ],
     "headers": [
       {
@@ -34,6 +33,12 @@
         "source": "/icons/**",
         "headers": [
           { "key": "Cache-Control", "value": "public, max-age=604800" }
+        ]
+      },
+      {
+        "source": "/assets/**",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
         ]
       }
     ]

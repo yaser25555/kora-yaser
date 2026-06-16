@@ -67,3 +67,16 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Build output
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store

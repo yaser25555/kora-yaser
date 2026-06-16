@@ -1,8 +1,9 @@
-const CACHE_NAME = 'worldcup2026-v13';
+const CACHE_NAME = 'worldcup2026-v17';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/maradona.png',
+  '/logo.png',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap'

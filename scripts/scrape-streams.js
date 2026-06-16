@@ -6,6 +6,18 @@ const cheerio = require('cheerio');
 const SOURCE_URL = 'https://www.livehd7sport.com/';
 const OUTPUT = path.join(__dirname, '..', 'streams.json');
 
+function testUrl(url, timeout = 5000) {
+  if (!url) return Promise.resolve(null);
+  return new Promise(resolve => {
+    const req = https.get(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      timeout
+    }, res => { res.destroy(); resolve(true); });
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+  });
+}
+
 function fetch(url) {
   return new Promise((resolve, reject) => {
     https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (res) => {
@@ -93,7 +105,7 @@ async function scrape() {
         if (!pageUrl) return result;
 
         // Fetch the albaplayer page (serv=1 / default)
-        function extractFromHtml(html) {
+        function extractFromHtml(html, skipIframes) {
           // Clappr player: source:"URL"
           const clappr = html.match(/source\s*:\s*["']([^"']+\.m3u8[^"']*)["']/);
           if (clappr && !result.m3u8s.includes(clappr[1])) result.m3u8s.push(clappr[1]);
@@ -112,12 +124,14 @@ async function scrape() {
           const bit = html.match(/['"]hls['"]\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
           if (bit && !result.m3u8s.includes(bit[1])) result.m3u8s.push(bit[1]);
 
-          // iframes
-          const $s = cheerio.load(html);
-          $s('iframe').each((j, ifr) => {
-            const src = $s(ifr).attr('src');
-            if (src && src.trim() && !result.iframes.includes(src.trim())) result.iframes.push(src.trim());
-          });
+          // iframes (skip for ad-heavy servers)
+          if (!skipIframes) {
+            const $s = cheerio.load(html);
+            $s('iframe').each((j, ifr) => {
+              const src = $s(ifr).attr('src');
+              if (src && src.trim() && !result.iframes.includes(src.trim())) result.iframes.push(src.trim());
+            });
+          }
         }
 
         try {
@@ -137,9 +151,12 @@ async function scrape() {
             if (result.m3u8s.length + result.iframes.length >= 6) break;
             if (sUrl.includes('serv=1')) continue;
 
+            // Skip iframes from ad-heavy servers (serv=4 through serv=8)
+            const skipIf = /serv=[4-8]/i.test(sUrl);
+
             try {
               const sHtml = await fetch(sUrl);
-              extractFromHtml(sHtml);
+              extractFromHtml(sHtml, skipIf);
             } catch(e) { /* skip failed server */ }
           }
         } catch(e) { /* page not albaplayer, keep original sources */ }
@@ -176,7 +193,20 @@ async function scrape() {
       m.m3u82 = albaSources.m3u8s[1] || '';
       m.m3u83 = albaSources.m3u8s[2] || '';
 
-      console.log(`  ✓ ${m.team1} vs ${m.team2}: ${m.embedUrl2 ? '3 مصادر' : m.embedUrl ? 'مصدر واحد' : 'بدون مصدر'}`);
+      // Test sources reachability
+      const srcConfig = [
+        ['embedUrl','src1_ok'], ['embedUrl2','src2_ok'], ['embedUrl3','src3_ok'],
+        ['embedUrl4','src4_ok'], ['embedUrl5','src5_ok'],
+        ['m3u8','m3u8_ok'], ['m3u82','m3u82_ok'], ['m3u83','m3u83_ok']
+      ];
+      const testPromises = srcConfig.map(([key,flag]) =>
+        m[key] ? testUrl(m[key]).then(ok => m[flag] = ok) : Promise.resolve()
+      );
+      await Promise.allSettled(testPromises);
+      const srcCount = srcConfig.filter(([key]) => m[key]).length;
+      const okCount = srcConfig.filter(([key,flag]) => m[flag] === true).length;
+
+      console.log(`  ✓ ${m.team1} vs ${m.team2}: ${okCount}/${srcCount} مصادر شغالة`);
     } catch (e) {
       m.embedUrl = '';
       console.log('  ⚠️ فشل جلب المشغل لـ ' + m.team1 + ' vs ' + m.team2);
