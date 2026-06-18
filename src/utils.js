@@ -398,44 +398,77 @@ export async function resolveAlbaPlayerUrl(url) {
 }
 
 // Fetch albaplayer page and extract all stream sources
+function extractFromHtml(html, skipIframes, result) {
+    // Clappr player: source:"URL"
+    const clappr = html.match(/source\s*:\s*["']([^"']+\.m3u8[^"']*)["']/);
+    if (clappr && !result.embedUrl) result.embedUrl = clappr[1];
+
+    // AlbaPlayerControl('base64','hls') — decode base64
+    const b64Re = /AlbaPlayerControl\s*\(\s*['"]([A-Za-z0-9+/=]+)['"]/g;
+    let bm; const m3u8Keys = ['m3u8','m3u82','m3u83'];
+    while ((bm = b64Re.exec(html)) !== null) {
+        try {
+            const dec = atob(bm[1]);
+            if (dec.includes('.m3u8')) {
+                const slot = m3u8Keys.find(k => !result[k]);
+                if (slot) result[slot] = dec;
+            }
+        } catch(e) {}
+    }
+
+    // Bitmovin: source = {'hls':'URL'}
+    const bit = html.match(/['"]hls['"]\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
+    if (bit && !result.embedUrl) result.embedUrl = bit[1];
+
+    // iframes (unless skipIframes)
+    if (!skipIframes) {
+        const iframeRe = /<iframe[^>]+src\s*=\s*["']([^"']+)["']/gi;
+        let ifm; const iframeKeys = ['embedUrl','embedUrl2','embedUrl3','embedUrl4','embedUrl5'];
+        const seen = new Set(Object.values(result).filter(Boolean));
+        while ((ifm = iframeRe.exec(html)) !== null) {
+            const src = ifm[1].trim();
+            if (src && !seen.has(src)) {
+                seen.add(src);
+                const slot = iframeKeys.find(k => !result[k]);
+                if (slot) result[slot] = src;
+            }
+        }
+    }
+}
+
 export async function fetchAlbaSources(url) {
     const result = { embedUrl:'', embedUrl2:'', embedUrl3:'', embedUrl4:'', embedUrl5:'', m3u8:'', m3u82:'', m3u83:'' };
     if (!url || !url.includes('albaplayer')) return result;
     try {
-        const resp = await fetch(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now());
+        const baseUrl = url.split('?')[0];
+        const resp = await fetch(baseUrl + '?_t=' + Date.now());
         if (!resp.ok) return result;
         const html = await resp.text();
 
-        // Clappr player: source:"URL"
-        const clappr = html.match(/source\s*:\s*["']([^"']+\.m3u8[^"']*)["']/);
-        if (clappr) result.embedUrl = clappr[1];
+        extractFromHtml(html, false, result);
 
-        // AlbaPlayerControl('base64','hls') — decode base64
-        const b64Re = /AlbaPlayerControl\s*\(\s*['"]([A-Za-z0-9+/=]+)['"]/g;
-        let bm; let mi = 0; const m3u8Keys = ['m3u8','m3u82','m3u83'];
-        while ((bm = b64Re.exec(html)) !== null) {
-            try {
-                const dec = atob(bm[1]);
-                if (dec.includes('.m3u8') && mi < m3u8Keys.length) {
-                    result[m3u8Keys[mi]] = dec; mi++;
-                }
-            } catch(e) {}
+        // Parse server menu for additional servers
+        const serverUrls = [];
+        const menuRe = /<a[^>]+href\s*=\s*["']([^"']*serv\s*=\s*[2-9][^"']*)["']/gi;
+        let m;
+        while ((m = menuRe.exec(html)) !== null) {
+            const href = m[1].trim();
+            if (href && !serverUrls.includes(href)) serverUrls.push(href);
         }
 
-        // Bitmovin: source = {'hls':'URL'}
-        const bit = html.match(/['"]hls['"]\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
-        if (bit && !result.embedUrl) result.embedUrl = bit[1];
-
-        // iframes (up to 5)
-        const iframeRe = /<iframe[^>]+src\s*=\s*["']([^"']+)["']/gi;
-        let ifm; let ii = 0; const iframeKeys = ['embedUrl','embedUrl2','embedUrl3','embedUrl4','embedUrl5'];
-        const seen = new Set();
-        while ((ifm = iframeRe.exec(html)) !== null) {
-            const src = ifm[1].trim();
-            if (src && !seen.has(src) && ii < iframeKeys.length) {
-                seen.add(src);
-                if (!result[iframeKeys[ii]]) { result[iframeKeys[ii]] = src; ii++; }
-            }
+        // Fetch up to 5 other servers for more sources
+        for (const sUrl of serverUrls) {
+            const hasAll = Object.values(result).filter(Boolean).length >= 7;
+            if (hasAll) break;
+            const skipIf = /serv=[4-8]/i.test(sUrl);
+            try {
+                const fullUrl = sUrl.startsWith('http') ? sUrl : new URL(sUrl, baseUrl).href;
+                const sr = await fetch(fullUrl + (fullUrl.includes('?') ? '&' : '?') + '_t=' + Date.now());
+                if (sr.ok) {
+                    const sHtml = await sr.text();
+                    extractFromHtml(sHtml, skipIf, result);
+                }
+            } catch(e) {}
         }
     } catch(e) {}
     return result;
