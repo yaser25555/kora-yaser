@@ -938,7 +938,7 @@ export default function App() {
                         <span className="match-title" id="modalTitle">مشاهدة المباراة</span>
                         <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
                             <div id="modalSources" style={{display:'flex',flexWrap:'wrap',gap:'4px',justifyContent:'flex-end'}}></div>
-                            <button className="fs-btn" id="fullscreenBtn" onClick={() => { const el = document.getElementById('streamModal').querySelector('.modal-content'); if (el.requestFullscreen) el.requestFullscreen(); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); }} title="ملء الشاشة"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
+                            <button className="fs-btn" id="fullscreenBtn" onClick={() => { const el = document.getElementById('modalPlayerContainer'); if (el.requestFullscreen) el.requestFullscreen(); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); }} title="ملء الشاشة"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
                             <button className="modal-close" onClick={closeStream}>✕</button>
                         </div>
                     </div>
@@ -947,17 +947,17 @@ export default function App() {
                         <span>هذا البث من مصدر خارجي. في حال فتح لك نافذة إعلان، قم بإغلاقها فوراً والعودة هنا للتشغيل.</span>
                     </div>
                     <div id="modalPlayerContainer" style={{position:'relative',background:'#000'}}>
-                        <iframe className="modal-player" id="modalPlayer" allowFullScreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-popups allow-forms"></iframe>
-                        <video className="modal-player" id="modalVideo" style={{display:'none'}} controls preload="metadata" playsInline></video>
-                        <div id="playerTouchBlock" style={{position:'absolute',top:0,left:0,right:0,bottom:0,zIndex:5,background:'transparent'}}></div>
-                        <img src="./4.jpg" alt="YASEER-KOORA" className="player-logo" style={{position:'absolute',top:'8px',width:'clamp(120px,20vw,260px)',height:'auto',zIndex:10,pointerEvents:'none',opacity:0.9}} />
+                        <iframe className="modal-player" id="modalPlayer" allowFullScreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-popups allow-forms" style={{pointerEvents:'none'}}></iframe>
+                        <video className="modal-player" id="modalVideo" style={{display:'none',pointerEvents:'none'}} preload="metadata" playsInline></video>
+                        <div id="playerTouchBlock" style={{position:'absolute',top:0,left:0,right:0,bottom:0,zIndex:5,background:'transparent',pointerEvents:'auto'}}></div>
+                        <img src="./4.jpg" alt="YASEER-KOORA" className="player-logo" style={{position:'absolute',top:'4px',width:'clamp(160px,24vw,280px)',zIndex:10,pointerEvents:'none'}} />
                         <div style={{position:'absolute',top:'12px',left:'12px',zIndex:12,background:'rgba(0,0,0,0.7)',borderRadius:'6px',padding:'4px 10px',color:'#fff',fontSize:'13px',pointerEvents:'none',display:'flex',alignItems:'center',gap:'6px'}}>👁 {visitorCount ?? '...'}</div>
                         <button id="backToMenuBtn" onClick={() => { if (document.fullscreenElement||document.webkitFullscreenElement) { document.exitFullscreen?.()||document.webkitExitFullscreen?.(); setTimeout(window.__closeStream, 200); } else { window.__closeStream(); } }} style={{position:'absolute',bottom:'12px',left:'12px',zIndex:12,background:'rgba(0,0,0,0.6)',border:'1px solid rgba(255,255,255,0.2)',borderRadius:'6px',color:'white',padding:'8px 14px',fontSize:'14px',cursor:'pointer',pointerEvents:'auto',display:'flex',alignItems:'center',gap:'6px'}}>⌂ العودة</button>
                     </div>
                 </div>
             </div>
 
-            <img src="./4.jpg" alt="YASEER-KOORA" id="fsLogo" className="player-logo" style={{position:'fixed',top:'8px',width:'clamp(120px,20vw,260px)',height:'auto',zIndex:2147483647,pointerEvents:'none',opacity:0.9,display:fsOverlay?'block':'none'}} />
+            <img src="./4.jpg" alt="YASEER-KOORA" id="fsLogo" className="player-logo" style={{position:'fixed',top:'4px',width:'clamp(160px,24vw,280px)',zIndex:2147483647,pointerEvents:'none',display:fsOverlay?'block':'none'}} />
 
             <div className={`install-banner${showInstall?' show':''}`} id="installBanner">
                 <div className="install-text">

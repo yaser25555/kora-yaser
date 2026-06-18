@@ -1,2 +1,7 @@
 
 sport.m3u8
+node_modules/
+dist/
+.firebase/
+123456/
+*.m3u
