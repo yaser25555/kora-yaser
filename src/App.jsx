@@ -125,7 +125,7 @@ export default function App() {
             const channelUrl = 'https://tops.poiy.online/albaplayer/max1/';
             const chanSources = await fetchAlbaSources(channelUrl);
             const chanEntry = {
-                id: 'ch_max1', team1: 'beIN SPORT MAX 1', team2: '',
+                id: 'ch_max1', team1: 'قناة كأس العالم', team2: '',
                 channel: 'beIN SPORT MAX 1',
                 status: 'live', time: 'مباشر الآن',
                 logo1: 'https://www.bein.com/wp-content/uploads/2017/09/Bein-Sport-Max-1-logo.jpg',
@@ -194,7 +194,7 @@ export default function App() {
                             team1: sm.team1En, team2: sm.team2En,
                             time: sm.timeAst, dateAst: sm.dateAst, timeAst: sm.timeAst,
                             status: diffMin <= 0 ? 'live' : 'upcoming',
-                            channel: 'beIN SPORT MAX 1',
+                            channel: 'قناة كأس العالم',
                             logo1: '', logo2: '',
                             ...chanSources,
                             stadium: sm.stadium || '', group: sm.group || ''
@@ -221,7 +221,7 @@ export default function App() {
             try {
                 const chanSources = await fetchAlbaSources('https://tops.poiy.online/albaplayer/max1/');
                 const chanEntry = {
-                    id: 'ch_max1', team1: 'beIN SPORT MAX 1', team2: '',
+                    id: 'ch_max1', team1: 'قناة كأس العالم', team2: '',
                     channel: 'beIN SPORT MAX 1', status: 'live', time: 'مباشر الآن',
                     logo1: 'https://www.bein.com/wp-content/uploads/2017/09/Bein-Sport-Max-1-logo.jpg',
                     url: 'https://tops.poiy.online/albaplayer/max1/',
