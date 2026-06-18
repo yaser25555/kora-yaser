@@ -250,7 +250,7 @@ export default function App() {
             window.__openChannel = (i) => {
                 const ch = channels[i];
                 if (!ch) return;
-                openStream(ch.ch, ch.url, '', -1, null);
+                openStream(ch.ch, ch.url, ch.ch, -1, null);
             };
             renderContent(html);
         } catch (err) {
@@ -406,22 +406,35 @@ export default function App() {
         const container = document.getElementById('modalSources');
         if (!container) return;
         const { idx, match } = currentStreamRef.current;
-        if (!match || idx < 0) { container.innerHTML = ''; return; }
+        container.innerHTML = '';
+        if (!match || idx < 0) { container.style.display = 'none'; return; }
+        container.style.display = 'flex';
         const sm = {'1':'embedUrl','2':'embedUrl2','3':'embedUrl3','4':'embedUrl4','5':'embedUrl5','m3u8':'m3u8','m3u82':'m3u82','m3u83':'m3u83'};
-        const labels = ['المصدر 1','المصدر 2','المصدر 3','المصدر 4','المصدر 5','HLS 1','HLS 2','HLS 3'];
+        const labels = ['1','2','3','4','5','H1','H2','H3'];
         const btnKeys = ['1','2','3','4','5','m3u8','m3u82','m3u83'];
         const colors = ['#1565C0','#1976D2','#388E3C','#7B1FA2','#E65100','#00838F','#00695C','#4E342E'];
-        let html = '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:8px 12px;">';
         btnKeys.forEach((k, i) => {
             const key = sm[k];
             if (match[key]) {
-                html += `<button class="stream-btn" style="background:linear-gradient(135deg,${colors[i]},${colors[i]});font-size:12px;padding:5px 10px;border-radius:6px;" onclick="window.__switchSource('${k}')">▶ ${labels[i]}</button>`;
+                const btn = document.createElement('button');
+                btn.className = 'stream-btn';
+                btn.style.cssText = `background:${colors[i]};font-size:11px;padding:4px 8px;border-radius:4px;color:#fff;border:none;cursor:pointer;white-space:nowrap;`;
+                btn.textContent = '▶ ' + labels[i];
+                btn.__source = k;
+                btn.onclick = () => window.__switchSource(k);
+                container.appendChild(btn);
             }
         });
-        html += `<button class="stream-btn" style="background:linear-gradient(135deg,#FF8F00,#FF6F00);font-size:12px;padding:5px 10px;border-radius:6px;" onclick="window.__shareLink()">📤 مشاركة</button>`;
-        html += `<button class="stream-btn" style="background:linear-gradient(135deg,#37474F,#263238);font-size:12px;padding:5px 10px;border-radius:6px;" onclick="window.__toggleFullscreen()">⛶ ملء الشاشة</button>`;
-        html += '</div>';
-        container.innerHTML = html;
+        // Add share button
+        const share = document.createElement('button');
+        share.className = 'stream-btn';
+        share.style.cssText = 'background:#FF8F00;font-size:11px;padding:4px 8px;border-radius:4px;color:#fff;border:none;cursor:pointer;white-space:nowrap;';
+        share.textContent = '📤';
+        share.title = 'مشاركة';
+        share.onclick = () => window.__shareLink();
+        container.appendChild(share);
+        const warn = document.getElementById('modalWarning');
+        if (warn) warn.style.display = 'none';
     }, []);
 
     const syncTouchBlock = useCallback(() => {
@@ -442,8 +455,11 @@ export default function App() {
         if (!url) return;
         iframe.style.display = 'none'; video.style.display = 'none';
         if (hlsInstance.current) { hlsInstance.current.destroy(); hlsInstance.current = null; }
-        if (url.includes('.m3u8')) {
+        const isM3u8 = url.includes('.m3u8');
+        const warn = document.getElementById('modalWarning');
+        if (isM3u8) {
             video.style.display = 'block';
+            if (warn) warn.style.display = 'none';
             if (window.Hls && Hls.isSupported()) {
                 const ref = url.includes('hibridcdn') ? 'https://rotana.net/' :
                             url.includes('micobali') ? 'https://p4.panda-hd.online/' :
@@ -459,12 +475,14 @@ export default function App() {
                 video.play().catch(() => {});
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = url; video.play().catch(() => {});
-            } else { iframe.style.display = 'block'; iframe.src = url; }
-        } else { iframe.style.display = 'block'; iframe.src = url || ''; }
+            } else { iframe.style.display = 'block'; iframe.src = url; if (warn) warn.style.display = 'flex'; }
+        } else { iframe.style.display = 'block'; iframe.src = url || ''; if (warn) warn.style.display = 'flex'; }
         syncTouchBlock();
         document.querySelectorAll('#modalSources .stream-btn').forEach(b => b.style.opacity = '0.5');
-        const active = document.querySelector(`#modalSources .stream-btn[onclick*="'${source}'"]`);
-        if (active) active.style.opacity = '1';
+        // Highlight active button by finding which source key matches
+        document.querySelectorAll('#modalSources .stream-btn').forEach(b => {
+            if (b.__source === source) b.style.opacity = '1';
+        });
     }, [syncTouchBlock]);
 
     const shareLink = useCallback(() => {
@@ -485,25 +503,30 @@ export default function App() {
         if (!iframe || !video) return;
         iframe.style.display = 'none'; video.style.display = 'none';
         if (hlsInstance.current) { hlsInstance.current.destroy(); hlsInstance.current = null; }
+        const isChannel = matchIdx < 0;
+        let channelName = channel || '';
+        if (!channelName && url && url.includes('albaplayer/max')) {
+            const m2 = url.match(/max(\d+)/i);
+            if (m2) channelName = 'beIN SPORT MAX ' + m2[1];
+        }
         // For channels: pre-fetch all server sources
-        if (matchIdx < 0 && channel) {
-            if (!url && channel) {
-                const n = channel.toLowerCase().match(/max\s*(\d+)/i);
+        if (isChannel) {
+            if (!url && channelName) {
+                const n = channelName.toLowerCase().match(/max\s*(\d+)/i);
                 if (n) url = 'https://tops.poiy.online/albaplayer/max' + n[1] + '/';
             }
             if (url && url.includes('albaplayer')) {
                 const allSources = await fetchAlbaSources(url);
-                const firstM3u8 = allSources.m3u8 || allSources.embedUrl || '';
+                const firstM3u8 = allSources.m3u8 || allSources.embedUrl || allSources.m3u82 || allSources.embedUrl2 || allSources.m3u83 || allSources.embedUrl3 || '';
                 if (firstM3u8.includes('.m3u8')) url = firstM3u8;
-                matchData = { team1: title, channel, ...allSources };
+                matchData = { team1: title, team2: '', channel: channelName, ...allSources };
                 matchIdx = 0;
             }
         } else {
-            if (!url && channel) {
-                const n = channel.toLowerCase().match(/max\s*(\d+)/i);
+            if (!url && channelName) {
+                const n = channelName.toLowerCase().match(/max\s*(\d+)/i);
                 if (n) url = 'https://tops.poiy.online/albaplayer/max' + n[1] + '/';
             }
-            // Resolve albaplayer URLs to direct m3u8
             if (url && url.includes('albaplayer')) {
                 const resolved = await resolveAlbaPlayerUrl(url);
                 if (resolved !== url) url = resolved;
@@ -894,12 +917,12 @@ export default function App() {
                     <div className="modal-header">
                         <span className="match-title" id="modalTitle">مشاهدة المباراة</span>
                         <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                            <div id="modalSources" style={{display:'flex',flexWrap:'wrap',gap:'4px',justifyContent:'flex-end'}}></div>
                             <button className="fs-btn" id="fullscreenBtn" onClick={() => { const el = document.getElementById('streamModal').querySelector('.modal-content'); if (el.requestFullscreen) el.requestFullscreen(); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); }} title="ملء الشاشة"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
                             <button className="modal-close" onClick={closeStream}>✕</button>
                         </div>
                     </div>
-                    <div id="modalSources"></div>
-                    <div style={{background:'rgba(255,193,7,0.1)',borderBottom:'1px solid rgba(255,193,7,0.2)',padding:'8px 16px',color:'#ffc107',fontSize:'13px',fontWeight:600,textAlign:'center',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                    <div id="modalWarning" style={{background:'rgba(255,193,7,0.1)',borderBottom:'1px solid rgba(255,193,7,0.2)',padding:'8px 16px',color:'#ffc107',fontSize:'13px',fontWeight:600,textAlign:'center',display:'none',alignItems:'center',justifyContent:'center',gap:8}}>
                         <span>💡</span>
                         <span>هذا البث من مصدر خارجي. في حال فتح لك نافذة إعلان، قم بإغلاقها فوراً والعودة هنا للتشغيل.</span>
                     </div>
