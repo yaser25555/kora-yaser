@@ -8,8 +8,9 @@ import {
     renderStandingsHtml, renderStandingsCards, srcBtnHtml,
     getTheme, setTheme, toggleThemeValue, shareMatchData,
     TEAM_NAMES, STADIUM_NAMES, TZ_LIST, GROUPS, GROUP_NAMES,
-    setAllMatches, getAllMatches
+    setAllMatches, getAllMatches, resolveAlbaPlayerUrl
 } from './utils.js';
+import { signInWithGoogle, signOutUser, onAuthChange } from './firebase.js';
 
 export default function App() {
     const [tz, setTzState] = useState(getUserTz);
@@ -20,15 +21,13 @@ export default function App() {
     const [tzOpen, setTzOpen] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [showInstall, setShowInstall] = useState(false);
+    const [user, setUser] = useState(() => { try { const s = localStorage.getItem('kora_user'); return s ? JSON.parse(s) : null; } catch(e) { return null; } });
     const contentRef = useRef(null);
     const toastTimer = useRef(null);
     const hlsInstance = useRef(null);
     const currentStreamRef = useRef({ idx: -1, match: null });
     const [visitorCount, setVisitorCount] = useState(null);
-    const [channelsData, setChannelsData] = useState([]);
     const [fsOverlay, setFsOverlay] = useState(false);
-    const [chPage, setChPage] = useState(0);
-    const CH_PER_PAGE = 50;
 
     const setTz = useCallback((newTz) => { setTzState(newTz); saveUserTz(newTz); clearDmCache(); }, []);
     const toggleTheme = useCallback(() => { const next = toggleThemeValue(theme); setThemeState(next); setTheme(next); }, [theme]);
@@ -59,7 +58,9 @@ export default function App() {
             const st = m.status === 'live' ? 'ongoing' : m.status === 'finished' ? 'finished' : 'upcoming';
             const sm = { live:'⚡ مباشر', coming:'⏳ بعد قليل', upcoming:'🔜 قادمة' };
             const sc = (m.score1!=null && m.score2!=null) ? `${m.score1} - ${m.score2}` : '';
-            let c = `<div class="stream-card ${m.status==='live'?'live':''}"><img src="${m.logo1||''}" alt="" class="team-logo" onerror="this.style.display='none'"><div class="team-name left">${m.team1}</div><div class="score-box">${sc?`<div class="score">${sc}</div>`:''}<div class="time">${m.time||''}</div></div><div class="team-name right">${m.team2}</div><img src="${m.logo2||''}" alt="" class="team-logo" onerror="this.style.display='none'"><div class="actions"><span class="status-badge ${st}">${sm[m.status]||m.statusText}</span>${m.channel?`<span class="channel">📡 ${m.channel}</span>`:''}<div class="source-btns">`;
+            const t1 = m.team1En || TEAM_NAMES[m.team1] || m.team1;
+            const t2 = m.team2En || TEAM_NAMES[m.team2] || m.team2;
+            let c = `<div class="stream-card ${m.status==='live'?'live':''}"><img src="${m.logo1||''}" alt="" class="team-logo" onerror="this.style.display='none'"><div class="team-name left">${t1}</div><div class="score-box">${sc?`<div class="score">${sc}</div>`:''}<div class="time">${m.time||''}</div></div><div class="team-name right">${t2}</div><img src="${m.logo2||''}" alt="" class="team-logo" onerror="this.style.display='none'"><div class="actions"><span class="status-badge ${st}">${sm[m.status]||m.statusText}</span>${m.channel?`<span class="channel">📡 ${m.channel}</span>`:''}<div class="source-btns">`;
             srcKeys.forEach((k, i) => { if (m[k]) c += srcBtnHtml(idx, btnKeys[i], labels[i], cls[i], styl[i], sd); });
             c += `</div></div></div>`;
             return c;
@@ -81,50 +82,7 @@ export default function App() {
         renderContent(html);
     }, [renderContent]);
 
-    const renderChannels = useCallback((sd, chData) => {
-        if ((!sd || !sd.length) && (!chData || !chData.length)) { renderContent(`<div style="text-align:center;padding:40px;color:#666;">لا توجد قنوات متاحة حالياً</div>`); return; }
-        let html = '';
-        // Match-based channels
-        if (sd && sd.length) {
-            const cm = {};
-            sd.forEach((m, idx) => { if (m.channel && !cm[m.channel]) cm[m.channel] = { match:m, idx, ch:m.channel }; });
-            const srcKeys = ['embedUrl','embedUrl2','embedUrl3','embedUrl4','embedUrl5','m3u8','m3u82','m3u83'];
-            const btnKeys = ['1','2','3','4','5','m3u8','m3u82','m3u83'];
-            const labels = ['1','2','3','4','5','H1','H2','H3'];
-            const cls = ['','alt-source','alt-source','alt-source','alt-source','m3u8-source','m3u8-source','m3u8-source'];
-            const styl = ['','background:linear-gradient(135deg,#1976D2,#1565C0)','background:linear-gradient(135deg,#388E3C,#2E7D32)','background:linear-gradient(135deg,#7B1FA2,#6A1B9A)','background:linear-gradient(135deg,#E65100,#BF360C)','','background:linear-gradient(135deg,#00695C,#004D40)!important','background:linear-gradient(135deg,#4E342E,#3E2723)!important'];
-            html += `<div class="group-section"><div class="group-header"><span>📡 قنوات المباريات</span><span class="count">${Object.keys(cm).length} قناة</span></div>`;
-            Object.values(cm).forEach(c => {
-                html += `<div class="stream-card channel-card"><div class="channel-title">📡 ${c.ch}</div><div style="font-size:12px;color:#999;margin-bottom:8px;text-align:center;">${c.match.team1} vs ${c.match.team2}</div><div class="actions"><div class="source-btns">`;
-                srcKeys.forEach((k, i) => { if (c.match[k]) html += srcBtnHtml(c.idx, btnKeys[i], labels[i], cls[i], styl[i], sd); });
-                html += `</div></div></div>`;
-            });
-            html += `</div>`;
-        }
-        // TV channels from channels.json
-        if (chData && chData.length) {
-            const totalPages = Math.ceil(chData.length / CH_PER_PAGE);
-            const start = chPage * CH_PER_PAGE;
-            const pageChs = chData.slice(start, start + CH_PER_PAGE);
-            html += `<div class="group-section"><div class="group-header open"><span>📺 القنوات العربية</span><span class="count">${chData.length} قناة</span><span class="toggle-icon">▶</span></div><div class="group-body open" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:10px;">`;
-            pageChs.forEach((ch, i) => {
-                const logo = ch.logo || '';
-                html += `<div class="channel-card" style="cursor:pointer;text-align:center;background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;transition:transform .2s;" onclick="window.__playChannel(${start + i})"><img src="${logo}" alt="${ch.ch}" style="width:70px;height:70px;object-fit:contain;border-radius:8px;margin-bottom:6px;" onerror="this.style.display='none'"><div style="font-size:12px;color:#ccc;line-height:1.3;">${ch.ch}</div></div>`;
-            });
-            html += `</div>`;
-            // Pagination
-            if (totalPages > 1) {
-                html += `<div style="display:flex;gap:8px;justify-content:center;padding:10px;">`;
-                if (chPage > 0) html += `<button class="stream-btn" style="padding:6px 16px;font-size:13px;" onclick="document.getElementById('content').scrollIntoView();window.__chPage(${chPage - 1})">⬅ السابق</button>`;
-                html += `<span style="color:#90a4ae;font-size:13px;padding:6px;">${chPage + 1} / ${totalPages}</span>`;
-                if (chPage < totalPages - 1) html += `<button class="stream-btn" style="padding:6px 16px;font-size:13px;" onclick="document.getElementById('content').scrollIntoView();window.__chPage(${chPage + 1})">التالي ➡</button>`;
-                html += `</div>`;
-            }
-            html += `</div>`;
-        }
-        html += `<div style="text-align:center;color:#555;font-size:clamp(10px,0.8vw,13px);margin-top:10px;">جميع المصادر من خوادم متعددة - اختر الأنسب لك</div>`;
-        renderContent(html);
-    }, [renderContent, chPage]);
+
 
     // === Live Bar ===
     const renderLiveBar = useCallback(() => {
@@ -144,31 +102,62 @@ export default function App() {
     const loadStreams = useCallback(async () => {
         renderContent(`<div class="loading"><div class="spinner"></div><div>جارٍ تحميل روابط المشاهدة...</div></div>`);
         try {
-            const resp = await fetch('./streams.json?t=' + Date.now());
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            const data = await resp.json();
-            const sd = data.matches;
+            const [streamsRes, scheduleRes] = await Promise.all([
+                fetch('./streams.json?t=' + Date.now()),
+                fetch('./matches.json?t=' + Date.now())
+            ]);
+            if (!streamsRes.ok) throw new Error('HTTP ' + streamsRes.status);
+            const streamsData = await streamsRes.json();
+            const schedule = scheduleRes.ok ? (await scheduleRes.json()).matches : [];
+
+            // Build schedule lookup by English names for better display names
+            const schedMap = {};
+            schedule.forEach(sm => {
+                const k = (sm.team1En||'') + '_' + (sm.team2En||'');
+                const r = (sm.team2En||'') + '_' + (sm.team1En||'');
+                schedMap[k.toLowerCase().replace(/\s+/g,'')] = sm;
+                schedMap[r.toLowerCase().replace(/\s+/g,'')] = sm;
+            });
+
+            // Time heuristic: mark stale "live" matches as finished (125+ min ago)
+            const sd = streamsData.matches;
             const now = new Date();
             sd.forEach(m => {
                 if (m.status === 'live' && m.time) {
                     try {
-                        let h = 0, min = 0;
-                        if (m.time.toLowerCase().includes('am') || m.time.toLowerCase().includes('pm')) {
-                            const parts = m.time.split(/:|\s/);
-                            h = parseInt(parts[0]); min = parseInt(parts[1]);
-                            if (m.time.toLowerCase().includes('pm') && h !== 12) h += 12;
-                            if (m.time.toLowerCase().includes('am') && h === 12) h = 0;
-                        } else { const parts = m.time.split(':'); h = parseInt(parts[0]); min = parseInt(parts[1]); }
-                        const md = new Date(); md.setHours(h, min, 0, 0);
-                        if (now < md && (md - now) > 12*60*60*1000) md.setDate(md.getDate() - 1);
-                        if ((now - md)/60000 >= 125) m.status = 'finished';
+                        const [h, mn] = m.time.split(':').map(Number);
+                        const matchT = new Date(); matchT.setHours(h, mn, 0, 0);
+                        if ((now - matchT) > 125*60000) m.status = 'finished';
                     } catch(e) {}
                 }
+                // Cross-reference for better display names (never filter out)
+                const sKey = ((m.team1||'') + '_' + (m.team2||'')).replace(/\s+/g,'').toLowerCase();
+                const schedEntry = schedMap[sKey];
+                if (schedEntry) {
+                    m.dateAst = m.dateAst || schedEntry.dateAst;
+                    m.timeAst = m.timeAst || schedEntry.timeAst;
+                    if (!m.team1En) m.team1En = schedEntry.team1En;
+                    if (!m.team2En) m.team2En = schedEntry.team2En;
+                }
+                // Fallback: match by time if team names fail
+                if (!m.team1En && m.time) {
+                    const candidates = schedule.filter(sm => sm.timeAst === m.time);
+                    if (candidates.length === 1) {
+                        m.team1En = candidates[0].team1En;
+                        m.team2En = candidates[0].team2En;
+                        m.dateAst = m.dateAst || candidates[0].dateAst;
+                    }
+                }
             });
-            setStreamsData(sd);
-            renderStreams(sd);
+
+            const activeSd = sd.filter(m => m.status !== 'finished');
+            const liveMatches = activeSd.filter(m => m.status === 'live');
+            const upcomingMatches = activeSd.filter(m => m.status === 'upcoming');
+            const displaySd = [...liveMatches, ...upcomingMatches];
+            setStreamsData(displaySd);
+            renderStreams(displaySd);
             const info = document.getElementById('updateInfo');
-            if (info) info.innerHTML = `<span>📺 آخر تحديث للروابط: ${new Date(data.lastUpdated).toLocaleString('ar-SA')}</span>`;
+            if (info) info.innerHTML = `<span>📺 آخر تحديث للروابط: ${new Date(streamsData.lastUpdated).toLocaleString('ar-SA')}</span>`;
         } catch (err) {
             renderContent(`<div class="error-msg">❌ فشل تحميل روابط المشاهدة: ${err.message}<br><button class="retry-btn" onclick="window.__retryStreams()">إعادة المحاولة</button></div>`);
         }
@@ -177,19 +166,27 @@ export default function App() {
     const loadChannels = useCallback(async () => {
         renderContent(`<div class="loading"><div class="spinner"></div><div>جارٍ تحميل القنوات...</div></div>`);
         try {
-            const [streamResp, chResp] = await Promise.all([
-                fetch('./streams.json?t=' + Date.now()),
-                fetch('./channels.json?t=' + Date.now())
-            ]);
-            if (!streamResp.ok) throw new Error('HTTP ' + streamResp.status);
-            const streamData = await streamResp.json();
-            const chData = chResp.ok ? await chResp.json() : [];
-            setStreamsData(streamData.matches);
-            setChannelsData(chData);
-            setChPage(0);
-            renderChannels(streamData.matches, chData);
-        } catch (err) { renderContent(`<div class="error-msg">❌ فشل تحميل القنوات: ${err.message}</div>`); }
-    }, [renderContent, renderChannels]);
+            const resp = await fetch('./channels.json?t=' + Date.now());
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const channels = await resp.json();
+            let html = `<div class="stream-grid" style="grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr))">`;
+            channels.forEach((c, i) => {
+                const logo = c.logo ? `<img src="${c.logo}" alt="" style="width:40px;height:40px;object-fit:contain;border-radius:8px;" onerror="this.style.display='none'">` : `<div style="width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:18px;">📺</div>`;
+                html += `<div class="stream-card" style="cursor:pointer;border-top-color:#1976D2;" onclick="window.__openChannel(${i})"><div style="display:flex;align-items:center;gap:12px;width:100%;"><div style="flex-shrink:0;">${logo}</div><div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:15px;">${c.ch}</div><div style="color:#90a4ae;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;">${c.url}</div></div></div></div>`;
+            });
+            html += `</div>`;
+            window.__openChannel = (i) => {
+                const ch = channels[i];
+                if (!ch) return;
+                openStream(ch.ch, ch.url, '', -1, null);
+            };
+            renderContent(html);
+        } catch (err) {
+            renderContent(`<div class="error-msg">❌ فشل تحميل القنوات: ${err.message}<br><button class="retry-btn" onclick="window.__retryChannels()">إعادة المحاولة</button></div>`);
+        }
+    }, [renderContent]);
+
+
 
     const buildGroupButtons = useCallback(() => {
         const bar = document.getElementById('groupsBar');
@@ -228,7 +225,7 @@ export default function App() {
                 html += `</div></div></div>`;
             }
             sortedDates.forEach(dateKey => {
-                const dayMs = grouped[dateKey]; const isT = dateKey === todayStr;
+                const dayMs = grouped[dateKey].sort((a,b) => (a.timeAst||a.time||'').localeCompare(b.timeAst||b.time||'')); const isT = dateKey === todayStr;
                 html += `<div class="group-section"><div class="group-header" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')"><span>${isT?'📅 اليوم':'📅 '+formatDate(dateKey)}</span><span class="count">${dayMs.length} مباراة</span><span class="toggle-icon">▶</span></div><div class="group-body${isT?' open':''}"><table><thead><tr><th>#</th><th>المباراة</th><th>التوقيت</th><th>النتيجة</th><th>الحالة</th><th>الملعب</th><th>⭐</th></tr></thead><tbody>`;
                 dayMs.forEach((m, i) => {
                     const d = dm(m); const st = getStatus(m.score1, m.score2, m.date, m.timeAst, m.dateAst);
@@ -322,34 +319,6 @@ export default function App() {
     }, [switchSection, renderContent]);
 
     // === Streaming Modal ===
-    const openStream = useCallback((title, url, channel, matchIdx, matchData) => {
-        const iframe = document.getElementById('modalPlayer');
-        const video = document.getElementById('modalVideo');
-        if (!iframe || !video) return;
-        iframe.style.display = 'none'; video.style.display = 'none';
-        if (hlsInstance.current) { hlsInstance.current.destroy(); hlsInstance.current = null; }
-        if (!url && channel) {
-            const n = channel.toLowerCase().match(/max\s*(\d+)/i);
-            if (n) url = 'https://tops.poiy.online/albaplayer/max' + n[1] + '/';
-        }
-        if (url && url.includes('.m3u8')) {
-            video.style.display = 'block';
-            if (window.Hls && Hls.isSupported()) {
-                hlsInstance.current = new Hls();
-                hlsInstance.current.loadSource(url);
-                hlsInstance.current.attachMedia(video);
-                video.play().catch(() => {});
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = url; video.play().catch(() => {});
-            } else { iframe.style.display = 'block'; iframe.src = url; }
-        } else { iframe.style.display = 'block'; iframe.src = url || ''; }
-        document.getElementById('modalTitle').textContent = '📺 ' + title;
-        currentStreamRef.current = { idx: matchIdx >= 0 ? matchIdx : -1, match: matchData || null };
-        renderModalSources();
-        document.getElementById('streamModal').classList.add('open');
-        document.body.style.overflow = 'hidden';
-    }, [renderModalSources]);
-
     const closeStream = useCallback(() => {
         if (hlsInstance.current) { hlsInstance.current.destroy(); hlsInstance.current = null; }
         const video = document.getElementById('modalVideo');
@@ -383,6 +352,12 @@ export default function App() {
         container.innerHTML = html;
     }, []);
 
+    const syncTouchBlock = useCallback(() => {
+        const tb = document.getElementById('playerTouchBlock');
+        const video = document.getElementById('modalVideo');
+        if (tb && video) tb.style.display = video.style.display === 'block' ? 'none' : 'block';
+    }, []);
+
     const switchSource = useCallback((source) => {
         const iframe = document.getElementById('modalPlayer');
         const video = document.getElementById('modalVideo');
@@ -398,7 +373,15 @@ export default function App() {
         if (url.includes('.m3u8')) {
             video.style.display = 'block';
             if (window.Hls && Hls.isSupported()) {
-                hlsInstance.current = new Hls();
+                const ref = url.includes('hibridcdn') ? 'https://rotana.net/' :
+                            url.includes('micobali') ? 'https://p4.panda-hd.online/' :
+                            url.includes('koora') ? 'https://www.livehd7sport.com/' :
+                            url.includes('yallapro') ? 'https://s3.us-east-2.amazonaws.com/' : '';
+                const cfg = {};
+                if (ref) {
+                    cfg.xhrSetup = (x, u) => { x.setRequestHeader('Referer', ref); };
+                }
+                hlsInstance.current = new Hls(cfg);
                 hlsInstance.current.loadSource(url);
                 hlsInstance.current.attachMedia(video);
                 video.play().catch(() => {});
@@ -406,10 +389,11 @@ export default function App() {
                 video.src = url; video.play().catch(() => {});
             } else { iframe.style.display = 'block'; iframe.src = url; }
         } else { iframe.style.display = 'block'; iframe.src = url || ''; }
+        syncTouchBlock();
         document.querySelectorAll('#modalSources .stream-btn').forEach(b => b.style.opacity = '0.5');
         const active = document.querySelector(`#modalSources .stream-btn[onclick*="'${source}'"]`);
         if (active) active.style.opacity = '1';
-    }, []);
+    }, [syncTouchBlock]);
 
     const shareLink = useCallback(() => {
         const { match } = currentStreamRef.current;
@@ -422,6 +406,48 @@ export default function App() {
             navigator.clipboard.writeText(text).then(() => showToast('✅ تم نسخ الرابط')).catch(() => {});
         }
     }, [showToast]);
+
+    const openStream = useCallback(async (title, url, channel, matchIdx, matchData) => {
+        const iframe = document.getElementById('modalPlayer');
+        const video = document.getElementById('modalVideo');
+        if (!iframe || !video) return;
+        iframe.style.display = 'none'; video.style.display = 'none';
+        if (hlsInstance.current) { hlsInstance.current.destroy(); hlsInstance.current = null; }
+        if (!url && channel) {
+            const n = channel.toLowerCase().match(/max\s*(\d+)/i);
+            if (n) url = 'https://tops.poiy.online/albaplayer/max' + n[1] + '/';
+        }
+        // Resolve albaplayer URLs to direct m3u8
+        if (url && url.includes('albaplayer')) {
+            const resolved = await resolveAlbaPlayerUrl(url);
+            if (resolved !== url) url = resolved;
+        }
+        if (url && url.includes('.m3u8')) {
+            video.style.display = 'block';
+            if (window.Hls && Hls.isSupported()) {
+                const ref = url.includes('hibridcdn') ? 'https://rotana.net/' :
+                            url.includes('micobali') ? 'https://p4.panda-hd.online/' :
+                            url.includes('koora') ? 'https://www.livehd7sport.com/' :
+                            url.includes('yallapro') ? 'https://s3.us-east-2.amazonaws.com/' : '';
+                const cfg = {};
+                if (ref) {
+                    cfg.xhrSetup = (x, u) => { x.setRequestHeader('Referer', ref); };
+                }
+                hlsInstance.current = new Hls(cfg);
+                hlsInstance.current.loadSource(url);
+                hlsInstance.current.attachMedia(video);
+                video.play().catch(() => {});
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = url; video.play().catch(() => {});
+            } else { iframe.style.display = 'block'; iframe.src = url; }
+        } else { iframe.style.display = 'block'; iframe.src = url || ''; }
+        syncTouchBlock();
+        document.getElementById('modalTitle').textContent = '📺 ' + title;
+        currentStreamRef.current = { idx: matchIdx >= 0 ? matchIdx : -1, match: matchData || null };
+        renderModalSources();
+        document.getElementById('streamModal').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }, [renderModalSources, syncTouchBlock]);
 
     const applyTheme = useCallback(() => {
         const t = getTheme();
@@ -440,6 +466,29 @@ export default function App() {
         list.innerHTML = TZ_LIST.map((t, i) => `<button class="tz-item${tz===t?' active':''}" onclick="window.__selectTz(${i})">${t.label}<span class="tz-offset">${t.iana}</span></button>`).join('');
     }, [tz]);
 
+    const handleLogin = useCallback(async () => {
+        try {
+            await signInWithGoogle();
+            showToast('✅ تم تسجيل الدخول بنجاح');
+        } catch (err) {
+            if (err.code === 'auth/popup-closed-by-user') return;
+            if (err.code === 'auth/unauthorized-continue-uri') {
+                showToast('⚠️ يرجى تفعيل Google Sign-In من Firebase Console (تعليمات في مربع الدردشة)');
+            } else {
+                showToast('❌ فشل تسجيل الدخول: ' + err.message);
+            }
+        }
+    }, [showToast]);
+
+    const handleLogout = useCallback(async () => {
+        try {
+            await signOutUser();
+            showToast('👋 تم تسجيل الخروج');
+        } catch (err) {
+            showToast('❌ فشل تسجيل الخروج');
+        }
+    }, [showToast]);
+
     // === Effects ===
     // Global click handler for stream buttons and modal backdrops
     useEffect(() => {
@@ -452,7 +501,7 @@ export default function App() {
                 if (m) {
                     const sm = {'1':'embedUrl','2':'embedUrl2','3':'embedUrl3','4':'embedUrl4','5':'embedUrl5','m3u8':'m3u8','m3u82':'m3u82','m3u83':'m3u83'};
                     const key = sm[source];
-                    openStream((m.team1||'') + ' vs ' + (m.team2||''), (key && m[key]) || m.embedUrl || '', m.channel, idx, m);
+                    openStream((m.team1||'') + ' vs ' + (m.team2||''), (key && m[key]) || m.embedUrl || '', m.channel, idx, m).catch(() => {});
                 }
             }
             if (e.target.closest('#streamModal') && !e.target.closest('.modal-content')) closeStream();
@@ -466,7 +515,22 @@ export default function App() {
     useEffect(() => { setTheme(theme); }, [theme]);
     useEffect(() => { applyTheme(); }, [applyTheme]);
 
-    // Clock
+    // Auth listener
+    useEffect(() => {
+        const unsub = onAuthChange((firebaseUser) => {
+            if (firebaseUser) {
+                const u = { uid: firebaseUser.uid, name: firebaseUser.displayName, email: firebaseUser.email, photo: firebaseUser.photoURL };
+                setUser(u);
+                localStorage.setItem('kora_user', JSON.stringify(u));
+            } else {
+                setUser(null);
+                localStorage.removeItem('kora_user');
+            }
+        });
+        return () => unsub();
+    }, []);
+
+    // Clock + countdowns (every 1s for real-time feel)
     useEffect(() => {
         const tick = () => {
             const tz = getUserTz();
@@ -476,17 +540,32 @@ export default function App() {
             const h = parseInt(ts); const ampm = h >= 12 ? 'م' : 'ص';
             const h12 = h % 12 || 12;
             const dsp = h12 + ':' + ts.split(':')[1] + ':' + ts.split(':')[2];
-            document.getElementById('saudiTime').textContent = dsp;
-            document.getElementById('amPm').textContent = ampm;
-            document.getElementById('saudiDate').textContent = new Intl.DateTimeFormat('ar-SA', { timeZone: tz.iana, weekday:'long', day:'numeric', month:'long', year:'numeric' }).format(now);
+            const elTime = document.getElementById('saudiTime');
+            const elAmPm = document.getElementById('amPm');
+            const elDate = document.getElementById('saudiDate');
+            if (elTime) elTime.textContent = dsp;
+            if (elAmPm) elAmPm.textContent = ampm;
+            if (elDate) elDate.textContent = new Intl.DateTimeFormat('ar-SA', { timeZone: tz.iana, weekday:'long', day:'numeric', month:'long', year:'numeric' }).format(now);
+            updateCountdowns();
         };
         tick(); const id = setInterval(tick, 1000);
         return () => clearInterval(id);
-    }, []);
+    }, [updateCountdowns]);
 
     // Periodic refreshes
-    useEffect(() => { const id = setInterval(updateCountdowns, 60000); return () => clearInterval(id); }, [updateCountdowns]);
     useEffect(() => { renderLiveBar(); const id = setInterval(renderLiveBar, 15000); return () => clearInterval(id); }, [renderLiveBar]);
+
+    // Refresh match status every 30s (auto-transition قادمة → مباشر → انتهت)
+    useEffect(() => {
+        if (activeSection !== 'today' && activeSection !== 'groups') return;
+        clearDmCache();
+        const fn = () => {
+            clearDmCache();
+            renderMatches(getAllMatches(), activeSection === 'groups' ? activeGroupFilter : 'today');
+        };
+        const id = setInterval(fn, 30000);
+        return () => clearInterval(id);
+    }, [activeSection, activeGroupFilter, renderMatches]);
 
     // Notifications
     useEffect(() => {
@@ -497,9 +576,8 @@ export default function App() {
                 if (notified.includes(m.id)) return;
                 if (!favs.includes(m.team1) && !favs.includes(m.team2)) return;
                 try {
-                    const dp = (m.dateAst||m.date||'').split('-').map(Number);
-                    const tp = (m.timeAst||'00:00').split(':').map(Number);
-                    const md = new Date(Date.UTC(dp[0], dp[1]-1, dp[2], tp[0], tp[1]));
+                    const md = new Date((m.dateAst||m.date||'') + 'T' + (m.timeAst||'00:00') + '+03:00');
+                    if (isNaN(md.getTime())) return;
                     const diff = (md - new Date()) / 60000;
                     if (diff > 0 && diff <= lead && Math.abs(diff - lead) < 1.5) {
                         markNotified(m.id);
@@ -525,19 +603,12 @@ export default function App() {
         return () => clearInterval(id);
     }, [activeSection, loadStreams]);
 
-    // Visitor counter
+    // Visitor counter (localStorage)
     useEffect(() => {
-        fetch('https://api.countapi.xyz/hit/kora-yaser/visitors')
-            .then(r => r.json())
-            .then(d => setVisitorCount(d.value))
-            .catch(() => {});
-        const id = setInterval(() => {
-            fetch('https://api.countapi.xyz/get/kora-yaser/visitors')
-                .then(r => r.json())
-                .then(d => setVisitorCount(d.value))
-                .catch(() => {});
-        }, 30000);
-        return () => clearInterval(id);
+        let count = parseInt(localStorage.getItem('vc') || '0', 10);
+        count += 1;
+        localStorage.setItem('vc', count.toString());
+        setVisitorCount(count);
     }, []);
 
     // Fullscreen overlay detection
@@ -555,6 +626,50 @@ export default function App() {
         };
     }, []);
 
+    // TV screen detection
+    useEffect(() => {
+        const check = () => {
+            const w = window.innerWidth;
+            document.body.toggleAttribute('data-tv', w >= 1400);
+        };
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
+
+    // Keyboard navigation for modal source buttons (TV remote support)
+    useEffect(() => {
+        const handler = (e) => {
+            const modal = document.getElementById('streamModal');
+            if (!modal || !modal.classList.contains('open')) return;
+            const btns = [...modal.querySelectorAll('.source-btns .stream-btn')];
+            if (!btns.length) return;
+            const currentIdx = btns.findIndex(b => b.classList.contains('kbfocus'));
+            let nextIdx = -1;
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % btns.length;
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                nextIdx = currentIdx < 0 ? btns.length - 1 : (currentIdx - 1 + btns.length) % btns.length;
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                const cols = window.innerWidth >= 1400 ? 3 : 2;
+                const step = e.key === 'ArrowUp' ? -cols : cols;
+                e.preventDefault();
+                nextIdx = currentIdx < 0 ? 0 : (currentIdx + step + btns.length) % btns.length;
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                if (currentIdx >= 0) { e.preventDefault(); btns[currentIdx].click(); return; }
+            }
+            if (nextIdx >= 0) {
+                btns.forEach(b => b.classList.remove('kbfocus'));
+                btns[nextIdx].classList.add('kbfocus');
+                btns[nextIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, []);
+
     // Window globals for inline onclick handlers
     useEffect(() => {
         window.__toggleFav = (team) => { toggleFavorite(team); switchSection(activeSection); };
@@ -563,6 +678,7 @@ export default function App() {
         window.__goToStream = () => switchSection('stream');
         window.__retryStreams = () => loadStreams();
         window.__retryData = () => loadData();
+        window.__retryChannels = () => loadChannels();
         window.__switchSource = (source) => switchSource(source);
         window.__shareLink = () => shareLink();
         window.__toggleFullscreen = () => {
@@ -578,11 +694,8 @@ export default function App() {
             }
         };
         window.__closeStream = () => { closeStream(); };
-        window.__playChannel = (i) => {
-            const ch = channelsData[i];
-            if (ch) openStream(ch.ch, ch.url, null, -1, { embedUrl: ch.url, ch: ch.ch });
-        };
-        window.__chPage = (p) => { setChPage(p); };
+        window.__login = () => handleLogin();
+        window.__logout = () => handleLogout();
         window.__switchGroupSubTab = (btn, tab) => {
             const parent = btn.closest('.group-body');
             if (!parent) return;
@@ -591,8 +704,8 @@ export default function App() {
             const contents = parent.querySelectorAll('.group-sub-content');
             contents.forEach((c, i) => c.classList.toggle('active', (tab === 'standings' ? 0 : contents.length - 1) === i));
         };
-        return () => { ['__toggleFav','__setGroupFilter','__selectTz','__goToStream','__retryStreams','__retryData','__switchSource','__shareLink','__toggleFullscreen','__closeStream','__playChannel','__chPage','__switchGroupSubTab'].forEach(k => delete window[k]); };
-    }, [activeSection, switchSection, loadStreams, loadData, setTz, closeTzPicker, showToast, channelsData, openStream]);
+        return () => { ['__toggleFav','__setGroupFilter','__selectTz','__goToStream','__retryStreams','__retryData','__retryChannels','__switchSource','__shareLink','__toggleFullscreen','__closeStream','__switchGroupSubTab','__openChannel'].forEach(k => delete window[k]); };
+    }, [activeSection, switchSection, loadStreams, loadData, setTz, closeTzPicker, showToast, openStream]);
 
     // PWA Install
     useEffect(() => {
@@ -629,7 +742,7 @@ export default function App() {
                             <p className="hero-motto">نحاول نشر السعادة بأبسط الطرق، لا إعلانات، لا مدفوعات، لا مبالغ اشتراك (تكفينا دعوة بالتوفيق) ❤️ 🤍</p>
                         </div>
                         <div className="hero-media">
-                            <img src="./maradona.png" alt="دييغو مارادونا" className="maradona-img" />
+                            <img src="/maradona.png" alt="دييغو مارادونا" className="maradona-img" />
                         </div>
                     </div>
                 </div>
@@ -642,6 +755,9 @@ export default function App() {
                     <span className="badge">🇸🇦 السعودية</span>
                     <button className="tz-btn" id="tzBtn" onClick={toggleTzPicker} title="المنطقة الزمنية">🕐</button>
                     <button className="theme-btn" id="themeBtn" onClick={toggleTheme} title="الوضع النهاري/الليلي">{theme === 'light' ? '🌙' : '☀️'}</button>
+                    <button className="user-btn" id="userBtn" onClick={user ? handleLogout : handleLogin} title={user ? 'تسجيل الخروج' : 'تسجيل الدخول'}>
+                        {user ? (user.photo ? <img src={user.photo} alt="" className="user-avatar" /> : <span className="user-initial">{(user.name||user.email||'?')[0]}</span>) : '👤'}
+                    </button>
                 </div>
 
                 <div className="live-bar" id="liveBar">
@@ -662,11 +778,11 @@ export default function App() {
                         <span>جدول المجموعات</span>
                     </button>
                     <button className="nav-tab" id="tab-stream" onClick={() => switchSection('stream')}>
-                        <svg viewBox="0 0 24 24"><path d="M21,3H3C1.89,3 1,3.89 1,5V17C1,18.11 1.89,19 3,19H8V21H16V19H21C22.11,19 23,18.11 23,17V5C23,3.89 22.11,3 21,3M21,17H3V5H21V17M16,11L9,15V7L16,11Z"/></svg>
+                        <svg viewBox="0 0 24 24"><path d="M21,3H3C1.89,3 1,3.89 1,5V17C1,18.11 3.89,19 3,19H8V21H16V19H21C22.11,19 23,18.11 23,17V5C23,3.89 22.11,3 21,3M21,17H3V5H21V17M16,11L9,15V7L16,11Z"/></svg>
                         <span>البث المباشر</span>
                     </button>
                     <button className="nav-tab" id="tab-channels" onClick={() => switchSection('channels')}>
-                        <svg viewBox="0 0 24 24"><path d="M21,6V8H3V6H21M3,16H21V14H3V16M3,11H21V9H3V11M3,21H21V19H3V21Z"/></svg>
+                        <svg viewBox="0 0 24 24"><path d="M21,6V8H3V6H21M21,10V12H3V10H21M3,16H15V18H3V16Z"/></svg>
                         <span>القنوات</span>
                     </button>
                 </div>
@@ -690,7 +806,10 @@ export default function App() {
                 <div className="modal-content">
                     <div className="modal-header">
                         <span className="match-title" id="modalTitle">مشاهدة المباراة</span>
-                        <button className="modal-close" onClick={closeStream}>✕</button>
+                        <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                            <button className="fs-btn" id="fullscreenBtn" onClick={() => { const el = document.getElementById('streamModal').querySelector('.modal-content'); if (el.requestFullscreen) el.requestFullscreen(); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); }} title="ملء الشاشة"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
+                            <button className="modal-close" onClick={closeStream}>✕</button>
+                        </div>
                     </div>
                     <div id="modalSources"></div>
                     <div style={{background:'rgba(255,193,7,0.1)',borderBottom:'1px solid rgba(255,193,7,0.2)',padding:'8px 16px',color:'#ffc107',fontSize:'13px',fontWeight:600,textAlign:'center',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
@@ -698,15 +817,17 @@ export default function App() {
                         <span>هذا البث من مصدر خارجي. في حال فتح لك نافذة إعلان، قم بإغلاقها فوراً والعودة هنا للتشغيل.</span>
                     </div>
                     <div id="modalPlayerContainer" style={{position:'relative',background:'#000'}}>
-                        <iframe className="modal-player" id="modalPlayer" allowFullScreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+                        <iframe className="modal-player" id="modalPlayer" allowFullScreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-popups allow-forms"></iframe>
                         <video className="modal-player" id="modalVideo" style={{display:'none'}} controls preload="metadata" playsInline></video>
+                        <div id="playerTouchBlock" style={{position:'absolute',top:0,left:0,right:0,bottom:0,zIndex:5,background:'transparent'}}></div>
+                        <img src="./4.jpg" alt="YASEER-KOORA" className="player-logo" style={{position:'absolute',top:'8px',width:'clamp(120px,20vw,260px)',height:'auto',zIndex:10,pointerEvents:'none',opacity:0.9}} />
                         <div style={{position:'absolute',top:'12px',left:'12px',zIndex:12,background:'rgba(0,0,0,0.7)',borderRadius:'6px',padding:'4px 10px',color:'#fff',fontSize:'13px',pointerEvents:'none',display:'flex',alignItems:'center',gap:'6px'}}>👁 {visitorCount ?? '...'}</div>
                         <button id="backToMenuBtn" onClick={() => { if (document.fullscreenElement||document.webkitFullscreenElement) { document.exitFullscreen?.()||document.webkitExitFullscreen?.(); setTimeout(window.__closeStream, 200); } else { window.__closeStream(); } }} style={{position:'absolute',bottom:'12px',left:'12px',zIndex:12,background:'rgba(0,0,0,0.6)',border:'1px solid rgba(255,255,255,0.2)',borderRadius:'6px',color:'white',padding:'8px 14px',fontSize:'14px',cursor:'pointer',pointerEvents:'auto',display:'flex',alignItems:'center',gap:'6px'}}>⌂ العودة</button>
                     </div>
                 </div>
             </div>
 
-            <img src="./logo.png" alt="YASEER-KOORA" id="fsLogo" className="player-logo" style={{position:'fixed',top:'8px',width:'clamp(120px,20vw,260px)',height:'auto',zIndex:2147483647,pointerEvents:'none',opacity:0.9,display:fsOverlay?'block':'none'}} />
+            <img src="./4.jpg" alt="YASEER-KOORA" id="fsLogo" className="player-logo" style={{position:'fixed',top:'8px',width:'clamp(120px,20vw,260px)',height:'auto',zIndex:2147483647,pointerEvents:'none',opacity:0.9,display:fsOverlay?'block':'none'}} />
 
             <div className={`install-banner${showInstall?' show':''}`} id="installBanner">
                 <div className="install-text">

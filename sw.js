@@ -4,6 +4,7 @@ const STATIC_ASSETS = [
   '/index.html',
   '/maradona.png',
   '/logo.png',
+  '/4.jpg',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap'
@@ -53,12 +54,17 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Skip cross-origin requests entirely (prevents opaque response errors)
+  if (url.origin !== self.location.origin && !url.hostname.includes('googleapis') && !url.hostname.includes('gstatic')) {
+    return;
+  }
+
   // Cache first for static assets (images, fonts, CSS)
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
-        if (response.ok && (url.origin === self.location.origin || url.hostname.includes('googleapis') || url.hostname.includes('gstatic'))) {
+        if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }

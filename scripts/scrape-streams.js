@@ -29,6 +29,44 @@ function fetch(url) {
   });
 }
 
+// Load the real WC schedule for cross-referencing
+let schedule = { matches: [] };
+try {
+  schedule = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'matches.json'), 'utf8'));
+  console.log('تم تحميل جدول كأس العالم (' + schedule.matches.length + ' مباراة)');
+} catch(e) {
+  console.log('⚠️ لم يتم العثور على matches.json');
+}
+
+// Build a lookup map: normalized team name -> match entry
+function norm(s) { return s.replace(/\s+/g, '').toLowerCase(); }
+const scheduleByGroup = {};
+schedule.matches.forEach(m => {
+  const g = m.group || '';
+  if (!scheduleByGroup[g]) scheduleByGroup[g] = [];
+  scheduleByGroup[g].push(m);
+});
+function findScheduleMatch(team1, team2, league) {
+  // First try: exact team name match across all matches
+  const n1 = norm(team1), n2 = norm(team2);
+  for (const m of schedule.matches) {
+    if (norm(m.team1Ar) === n1 && norm(m.team2Ar) === n2) return m;
+    if (norm(m.team2Ar) === n1 && norm(m.team1Ar) === n2) return m;
+  }
+  // Second try: extract group from league (e.g. "المجموعة و" -> "F") and search within that group
+  const grpLetters = { أ:'A',ب:'B',ج:'C',د:'D',هـ:'E',و:'F',ز:'G',ح:'H' };
+  for (const [ar, en] of Object.entries(grpLetters)) {
+    if (league.includes('المجموعة ' + ar)) {
+      const grp = scheduleByGroup[en] || [];
+      for (const m of grp) {
+        if (norm(m.team1Ar) === n1 || norm(m.team2Ar) === n2 ||
+            norm(m.team1Ar) === n2 || norm(m.team2Ar) === n1) return m;
+      }
+    }
+  }
+  return null;
+}
+
 async function scrape() {
   console.log('جلب البيانات من livehd7sport.com...');
   const html = await fetch(SOURCE_URL);
@@ -80,8 +118,21 @@ async function scrape() {
     });
   });
 
-  // Filter only World Cup matches that are live or upcoming
-  const activeMatches = matches.filter(m => m.league.includes('كأس العالم') && m.status !== 'finished');
+  // Cross-reference with real WC schedule and filter out non-WC matches
+  const activeMatches = [];
+  for (const m of matches) {
+    if (!m.league.includes('كأس العالم') || m.status === 'finished') continue;
+    // Verify this is a real WC match by cross-referencing team names with matches.json
+    const schedMatch = findScheduleMatch(m.team1, m.team2, m.league);
+    if (schedMatch) {
+      m.dateAst = schedMatch.dateAst;
+      m.timeAst = schedMatch.timeAst;
+      activeMatches.push(m);
+      console.log('  ✓ تأكيد: ' + m.team1 + ' vs ' + m.team2 + ' (' + m.dateAst + ' ' + m.timeAst + ')');
+    } else {
+      console.log('  ✗ تخطي: ' + m.team1 + ' vs ' + m.team2 + ' (ليست مباراة كأس العالم مؤكدة)');
+    }
+  }
 
   // Extract embed URLs for active matches (up to 3 sources)
   console.log('جلب روابط المشغل المباشر...');
@@ -207,6 +258,11 @@ async function scrape() {
       const okCount = srcConfig.filter(([key,flag]) => m[flag] === true).length;
 
       console.log(`  ✓ ${m.team1} vs ${m.team2}: ${okCount}/${srcCount} مصادر شغالة`);
+
+      // Clear dead sources so the app's channel-based fallback (albaplayer iframe) kicks in
+      srcConfig.forEach(([key,flag]) => {
+        if (m[key] && m[flag] !== true) m[key] = '';
+      });
     } catch (e) {
       m.embedUrl = '';
       console.log('  ⚠️ فشل جلب المشغل لـ ' + m.team1 + ' vs ' + m.team2);

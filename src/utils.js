@@ -52,7 +52,13 @@ export const TEAM_NAMES = {
     'Ghana':'غانا','Tunisia':'تونس','Algeria':'الجزائر','Egypt':'مصر',
     'Australia':'أستراليا','Iran':'إيران','Ecuador':'الإكوادور','Canada':'كندا',
     'Poland':'بولندا','Serbia':'صربيا','Colombia':'كولومبيا','New Zealand':'نيوزيلندا',
-    'Iraq':'العراق','Paraguay':'باراغواي'
+    'Iraq':'العراق','Paraguay':'باراغواي',
+    'Austria':'النمسا','Bosnia & Herzegovina':'البوسنة والهرسك','Curaçao':'كوراساو',
+    'Czech Republic':'التشيك','DR Congo':'الكونغو الديمقراطية','Haiti':'هايتي',
+    'Ivory Coast':'ساحل العاج','Jordan':'الأردن','Norway':'النرويج',
+    'Panama':'بنما','Qatar':'قطر','Scotland':'اسكتلندا',
+    'South Africa':'جنوب أفريقيا','Sweden':'السويد','Turkey':'تركيا',
+    'Uzbekistan':'أوزبكستان'
 };
 export const STADIUM_NAMES = {
     'King Fahd International Stadium':'استاد الملك فهد الدولي',
@@ -141,9 +147,8 @@ export function to12h(time24) {
 export function getStatus(score1, score2, date, timeAst, dateAst) {
     if (score1 !== null && score2 !== null) return 'finished';
     try {
-        const dp = (dateAst || date || '').split('-').map(Number);
-        const tp = (timeAst || '00:00').split(':').map(Number);
-        const matchDate = new Date(Date.UTC(dp[0], dp[1]-1, dp[2], tp[0], tp[1]));
+        const matchDate = new Date((dateAst||date||'') + 'T' + (timeAst||'00:00') + '+03:00');
+        if (isNaN(matchDate.getTime())) return 'upcoming';
         const now = new Date();
         const diff = (now - matchDate) / 1000 / 60;
         if (diff >= 125) return 'finished';
@@ -159,9 +164,8 @@ export function todayMatches(matches) { return matches.filter(m => isToday(m)); 
 
 export function countdownText(dateStr, timeAst) {
     try {
-        const dp = (dateStr || '').split('-').map(Number);
-        const tp = (timeAst || '00:00').split(':').map(Number);
-        const matchDate = new Date(Date.UTC(dp[0], dp[1]-1, dp[2], tp[0], tp[1]));
+        const matchDate = new Date((dateStr||'') + 'T' + (timeAst||'00:00') + '+03:00');
+        if (isNaN(matchDate.getTime())) return '';
         const now = new Date();
         const diff = (matchDate - now) / 1000 / 60;
         if (diff <= 0 || diff > 14400) return '';
@@ -362,4 +366,28 @@ export function shareMatchData(m) {
     if (m.stadium) text += `🏟️ ${STADIUM_NAMES[m.stadium]||m.stadium}\n`;
     text += `📲 تابع المباراة على: https://kora-yaser.web.app`;
     return text;
+}
+
+// Resolve albaplayer pages to direct m3u8 URLs
+export async function resolveAlbaPlayerUrl(url) {
+    if (!url || !url.includes('albaplayer')) return url;
+    try {
+        const resp = await fetch(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now());
+        if (!resp.ok) return url;
+        const html = await resp.text();
+        // Pattern 1: Clappr.Player({source:"..."})
+        const clapprMatch = html.match(/source\s*:\s*"([^"]+\.m3u8[^"]*)"/);
+        if (clapprMatch) return clapprMatch[1];
+        // Pattern 2: AlbaPlayerControl('BASE64','hls')
+        const apcMatch = html.match(/AlbaPlayerControl\s*\(\s*'([^']+)'/);
+        if (apcMatch) {
+            try {
+                return atob(apcMatch[1]);
+            } catch(e) {}
+        }
+        // Pattern 3: direct video src in video tag
+        const videoMatch = html.match(/<video[^>]+src\s*=\s*"([^"]+\.m3u8[^"]*)"/);
+        if (videoMatch) return videoMatch[1];
+    } catch(e) {}
+    return url;
 }

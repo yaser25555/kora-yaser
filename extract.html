@@ -1,0 +1,121 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
+<title>YASEER-KOORA - مستخرج روابط البث</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0d121f;color:#e0e0e0;min-height:100vh;padding:20px}
+.container{max-width:800px;margin:0 auto}
+h1{font-size:clamp(18px,3vw,28px);color:#ffc107;text-align:center;margin-bottom:4px}
+.sub{text-align:center;color:#78909c;font-size:14px;margin-bottom:24px}
+.card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;margin-bottom:16px}
+.url-row{display:flex;gap:8px}
+.url-row input{flex:1;background:#1a2332;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;direction:ltr}
+.url-row input:focus{outline:none;border-color:#ffc107}
+.btn{background:linear-gradient(135deg,#ffc107,#ff8f00);color:#000;border:none;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:0.5}
+.btn-sm{background:rgba(255,255,255,0.1);color:#e0e0e0;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer}
+.btn-primary{background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff}
+textarea{width:100%;background:#1a2332;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;color:#e0e0e0;font-size:13px;font-family:monospace;min-height:120px;resize:vertical}
+textarea:focus{outline:none;border-color:#ffc107}
+.result-item{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;margin-bottom:8px;word-break:break-all}
+.result-item .url{font-size:13px;color:#fff;margin-bottom:8px;direction:ltr;text-align:left}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-bottom:8px}
+.badge.m3u8{background:rgba(0,150,136,0.2);color:#4db6ac}
+.badge.iframe{background:rgba(33,150,243,0.2);color:#64b5f6}
+.spinner{width:32px;height:32px;border:3px solid rgba(255,193,7,0.2);border-top-color:#ffc107;border-radius:50%;animation:s .8s linear infinite;margin:20px auto}
+@keyframes s{to{transform:rotate(360deg)}}
+.stats{text-align:center;color:#607d8b;font-size:13px;margin-top:12px;margin-bottom:8px}
+.error{background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.3);border-radius:8px;padding:16px;color:#ef9a9a;margin-top:12px;font-size:14px}
+.hidden{display:none}
+.tabs{display:flex;gap:8px;margin-bottom:8px}
+.tab{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;color:#78909c}
+.tab.active{background:rgba(255,193,7,0.1);border-color:#ffc107;color:#ffc107}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>استخراج روابط البث</h1>
+  <p class="sub">الصق رابط صفحة البث لاكتشاف m3u8 / iframe</p>
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" data-tab="url" onclick="sw('url')">رابط URL</div>
+      <div class="tab" data-tab="html" onclick="sw('html')">لصق HTML</div>
+    </div>
+    <div id="tab-url">
+      <div class="url-row">
+        <input type="url" id="u" placeholder="https://www.livehd7sport.com/..." />
+        <button class="btn" id="b">استخراج</button>
+      </div>
+    </div>
+    <div id="tab-html" class="hidden">
+      <div class="url-row" style="flex-direction:column">
+        <textarea id="ta" placeholder="اعرض مصدر الصفحة (View Page Source) والصق الـ HTML كاملاً هنا"></textarea>
+        <button class="btn" onclick="goHtml()">تحليل</button>
+      </div>
+    </div>
+  </div>
+  <div id="loading" class="hidden"><div class="spinner"></div><div class="stats">جارٍ الجلب والاستخراج...</div></div>
+  <div id="error" class="hidden"></div>
+  <div id="r"></div>
+</div>
+<script>
+const PX=[
+  u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+  u=>'https://corsproxy.io/?'+encodeURIComponent(u),
+  u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u),
+  u=>'https://proxy.cors.sh/'+encodeURIComponent(u),
+];
+async function f(u,i){const r=await fetch(PX[i](u),{signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error('HTTP '+r.status);return r.text()}
+function x(h){
+  const r=[],s=new Set;
+  const a=(u,t,l)=>{if(!s.has(u)&&u&&u.length>5){s.add(u);r.push({url:u,type:t,label:l})}};
+  let m;
+  while((m=/source\s*:\s*["]([^"]+\.m3u8[^"]*)["]/gi.exec(h))) a(m[1],'m3u8','Clappr');
+  while((m=/AlbaPlayerControl\s*\(\s*[']([A-Za-z0-9+/=]+)[']/g.exec(h))){try{const d=atob(m[1]);if(d.includes('.m3u8'))a(d,'m3u8','AlbaPlayer')}catch(e){}}
+  while((m=/['"]hls['"]\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/gi.exec(h))) a(m[1],'m3u8','Bitmovin');
+  while((m=/https?:\/\/[^"'<>]+\.m3u8[^"'<>]*/gi.exec(h))){const u=m[0].replace(/&amp;/g,'&');if(!u.includes('.ts?'))a(u,'m3u8','مباشر')}
+  while((m=/<iframe[^>]+src\s*=\s*["']([^"']+)["']/gi.exec(h))){const s=m[1].trim();if(s&&!s.startsWith('//')&&!s.startsWith('#'))a(s,'iframe','iframe')}
+  while((m=/['"]file['"]\s*:\s*['"]([^'"]+)['"]/gi.exec(h))){const u=m[1];if(!u.includes('://'))continue;a(u,u.includes('.m3u8')?'m3u8':'unknown','File')}
+  while((m=/['"](?:src|url)['"]\s*:\s*['"]([^'"]+\.(?:m3u8|mp4)[^'"]*)['"]/gi.exec(h))) a(m[1],'m3u8','JSON');
+  while((m=/https?:\/\/[^"'<>\s]+\.ts(?:\?[^\s"'<>]*)?/gi.exec(h))){if(!s.has(m[0])){r.push({url:m[0],type:'ts',label:'TS قطعة'})}}
+  return r;
+}
+function show(r){
+  const c=document.getElementById('r');
+  if(!r.length){c.innerHTML='<div class="stats">لم يتم العثور على روابط</div>';return}
+  const m3=r.filter(x=>x.type==='m3u8').length, ifr=r.filter(x=>x.type==='iframe').length;
+  let h='<div class="stats">تم العثور على '+r.length+' رابط ('+m3+' HLS, '+ifr+' iframe)</div>';
+  r.forEach((x,i)=>{
+    const bt=x.type==='m3u8'?'HLS':x.type==='iframe'?'iframe':x.type==='ts'?'TS':'رابط';
+    h+='<div class="result-item"><div><span class="badge '+x.type+'">'+bt+'</span>'+(x.label?' <span style="color:#607d8b;font-size:11px">('+x.label+')</span>':'')+'</div><div class="url">'+x.url+'</div><div class="url-row" style="margin-top:8px"><button class="btn-sm" onclick="c('+i+')">نسخ</button></div></div>';
+  });
+  h+='<div style="text-align:center;margin-top:16px"><button class="btn-sm" onclick="ca()">نسخ الكل</button></div>';
+  c.innerHTML=h;window._r=r;
+}
+function c(i){navigator.clipboard.writeText(window._r[i].url).then(()=>{alert('تم النسخ')}).catch(()=>{})}
+function ca(){navigator.clipboard.writeText(window._r.map(x=>x.url).join('\n')).then(()=>{alert('تم نسخ الكل')}).catch(()=>{})}
+function sw(t){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab==t));document.getElementById('tab-url').classList.toggle('hidden',t!='url');document.getElementById('tab-html').classList.toggle('hidden',t!='html');document.getElementById('error').classList.add('hidden');document.getElementById('r').innerHTML=''}
+function goHtml(){const h=document.getElementById('ta').value;if(!h||h.length<50){document.getElementById('error').textContent='الصق HTML كاملاً (على الأقل 50 حرف)';document.getElementById('error').classList.remove('hidden');return}document.getElementById('error').classList.add('hidden');show(x(h))}
+async function goUrl(){
+  const u=document.getElementById('u').value.trim();
+  if(!u){document.getElementById('error').textContent='ادخل رابط';document.getElementById('error').classList.remove('hidden');return}
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('error').classList.add('hidden');
+  document.getElementById('r').innerHTML='';
+  document.getElementById('b').disabled=true;
+  let lastErr='';
+  for(let i=0;i<PX.length;i++){try{const h=await f(u,i);if(h&&h.length>100){show(x(h));document.getElementById('b').disabled=false;document.getElementById('loading').classList.add('hidden');return}}catch(e){lastErr=e.message}}
+  document.getElementById('error').innerHTML='فشلت جميع البروكسيات. جرب <b>لصق HTML</b> يدويًا: افتح الصفحة &rarr; اعرض مصدر الصفحة (Ctrl+U) &rarr; انسخ الكل &rarr; الصقه في تبويب "لصق HTML".<br><span style="font-size:12px;color:#607d8b">آخر خطأ: '+lastErr+'</span>';
+  document.getElementById('error').classList.remove('hidden');
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('b').disabled=false;
+}
+document.getElementById('b').addEventListener('click',goUrl);
+document.getElementById('u').addEventListener('keydown',e=>{if(e.key==='Enter')goUrl()});
+</script>
+</body>
+</html>

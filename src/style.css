@@ -58,7 +58,7 @@
             content: "";
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: url('./maradona.png') center center / cover no-repeat;
+            background: url('/maradona.png') center center / cover no-repeat;
             opacity: 0.06;
             z-index: -1;
             pointer-events: none;
@@ -203,7 +203,7 @@
         .time-bar .ampm { background: rgba(255,193,7,0.15); color: #ffc107; padding: 3px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1px solid rgba(255,193,7,0.25); }
         .time-bar .date { color: rgba(255,255,255,0.7); }
         .time-bar .badge { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; font-size: 13px; }
-        .theme-btn, .tz-btn {
+        .theme-btn, .tz-btn, .user-btn {
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.1);
             color: #ffc107;
@@ -218,9 +218,17 @@
             transition: all 0.3s;
             font-family: inherit;
             flex-shrink: 0;
+            position: relative;
         }
-        .theme-btn:hover, .tz-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.1); }
-        [data-theme="light"] .theme-btn, [data-theme="light"] .tz-btn {
+        .theme-btn:hover, .tz-btn:hover, .user-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.1); }
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+        .user-initial {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: linear-gradient(135deg, #1976D2, #1565C0);
+            color: #fff; font-size: 15px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+        }
+        [data-theme="light"] .theme-btn, [data-theme="light"] .tz-btn, [data-theme="light"] .user-btn {
             background: rgba(0,0,0,0.04);
             border-color: var(--clr-border);
             color: #f9a825;
@@ -1370,3 +1378,104 @@
         /* Scrollbar for light theme */
         [data-theme="light"] ::-webkit-scrollbar-track { background: #e0e0e0; }
         [data-theme="light"] ::-webkit-scrollbar-thumb { background: #bbb; }
+
+        /* ===== LARGE SCREEN / TV SUPPORT ===== */
+        @media (min-width: 1400px) {
+            .container { max-width: 1600px; }
+            .hero-content { grid-template-columns: 1.5fr 0.5fr; gap: 40px; }
+            .hero-title { font-size: clamp(36px, 3.5vw, 60px); }
+            .hero-desc { font-size: clamp(15px, 1.2vw, 20px); }
+            .stream-grid { grid-template-columns: repeat(3, 1fr); }
+            .stream-card .actions { min-width: 160px; }
+            .stream-btn { font-size: clamp(13px, 1vw, 16px); padding: 12px 28px; min-height: 48px; }
+            .source-btns .stream-btn { font-size: clamp(12px, 0.9vw, 15px); padding: 12px 10px; min-height: 44px; }
+            .nav-tab { font-size: clamp(16px, 1.2vw, 20px); padding: 12px 32px; }
+            .section-nav { gap: 16px; padding: 10px; }
+            .time-bar .time { font-size: clamp(24px, 2.2vw, 36px); }
+            .live-bar .live-match { font-size: clamp(14px, 1vw, 18px); padding: 8px 18px; }
+            .modal-content { max-width: 1400px; }
+            .modal-player { aspect-ratio: 16/9; max-height: calc(100vh - 100px); }
+        }
+        @media (min-width: 2000px) {
+            .container { max-width: 2000px; }
+            html { font-size: 18px; }
+            .hero-content { grid-template-columns: 1.75fr 0.25fr; gap: 50px; }
+            .hero-title { font-size: clamp(48px, 3vw, 72px); }
+            .stream-grid { grid-template-columns: repeat(4, 1fr); gap: 24px; }
+            .stream-card { padding: 28px; border-radius: 20px; }
+            .stream-card .team-logo { width: 54px; height: 54px; }
+            .stream-card .team-name { font-size: clamp(17px, 1vw, 22px); }
+            .stream-card .score-box .score { font-size: clamp(26px, 1.6vw, 36px); }
+            .stream-card .score-box .time { font-size: clamp(14px, 0.8vw, 18px); }
+            .stream-btn { font-size: clamp(15px, 0.9vw, 19px); padding: 14px 32px; min-height: 54px; border-radius: 28px; }
+            .source-btns .stream-btn { font-size: clamp(13px, 0.8vw, 17px); padding: 14px 12px; min-height: 50px; }
+            .source-btns { gap: 10px; }
+            .nav-tab { font-size: clamp(18px, 1vw, 24px); padding: 14px 40px; gap: 12px; }
+            .nav-tab svg { width: 24px; height: 24px; }
+            .section-nav { gap: 20px; padding: 14px; border-radius: 60px; }
+            .group-header { font-size: clamp(18px, 1vw, 24px); padding: 20px 32px; }
+            .group-btn { font-size: clamp(15px, 0.8vw, 19px); padding: 12px 24px; border-radius: 16px; }
+            .time-bar { font-size: clamp(16px, 1vw, 22px); padding: 18px 32px; }
+            .time-bar .time { font-size: clamp(28px, 2vw, 42px); }
+            .live-bar .live-match { font-size: clamp(16px, 0.9vw, 20px); padding: 10px 22px; }
+            .modal-content { max-width: 1800px; border-radius: 24px; }
+            .modal-header { padding: 20px 24px; }
+            .modal-header .match-title { font-size: clamp(18px, 1.2vw, 26px); }
+            .modal-close { width: 56px; height: 56px; font-size: 22px; }
+            .card-grid .mc { padding: 20px 24px; border-radius: 16px; }
+            .card-grid .mc .mc-teams { font-size: clamp(16px, 0.9vw, 20px); }
+            .card-grid .mc .mc-info .mc-score { font-size: clamp(18px, 1vw, 24px); }
+        }
+        @media (min-width: 3200px) {
+            .container { max-width: 2600px; }
+            html { font-size: 22px; }
+            .stream-grid { grid-template-columns: repeat(6, 1fr); gap: 28px; }
+            .stream-card { padding: 32px; border-radius: 24px; }
+            .hero-title { font-size: clamp(60px, 2.5vw, 84px); }
+            .nav-tab { font-size: clamp(20px, 0.9vw, 28px); padding: 16px 48px; }
+            .section-nav { gap: 24px; padding: 16px; }
+            .modal-content { max-width: 2400px; }
+        }
+        /* Keyboard / remote focus ring for TV */
+        .kbfocus { outline: 3px solid #ffc107 !important; outline-offset: 3px; }
+        [data-tv="true"] .stream-btn,
+        [data-tv="true"] .nav-tab,
+        [data-tv="true"] .group-btn,
+        [data-tv="true"] .modal-close,
+        [data-tv="true"] .share-btn { transition: outline 0.1s, transform 0.1s; }
+        [data-tv="true"] .kbfocus { transform: scale(1.05); }
+        /* TV fullscreen toggle */
+        [data-theme="light"] .fs-btn {
+            background: rgba(0,0,0,0.04);
+            border-color: var(--clr-border);
+            color: var(--clr-text);
+        }
+        [data-theme="light"] .fs-btn:hover { background: rgba(0,0,0,0.1); }
+        .fs-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .fs-btn:hover { background: rgba(255,255,255,0.15); transform: scale(1.05); }
+        .fs-btn:active { transform: scale(0.95); }
+        @media (min-width: 1400px) {
+            .fs-btn { width: 52px; height: 52px; font-size: 22px; }
+        }
+        .player-logo {
+            background: #000;
+            border-radius: 6px;
+            padding: 4px 6px;
+            right: 50px !important;
+        }
+        @media (orientation: landscape) {
+            .player-logo { right: 65px !important; }
+        }
