@@ -485,14 +485,29 @@ export default function App() {
         if (!iframe || !video) return;
         iframe.style.display = 'none'; video.style.display = 'none';
         if (hlsInstance.current) { hlsInstance.current.destroy(); hlsInstance.current = null; }
-        if (!url && channel) {
-            const n = channel.toLowerCase().match(/max\s*(\d+)/i);
-            if (n) url = 'https://tops.poiy.online/albaplayer/max' + n[1] + '/';
-        }
-        // Resolve albaplayer URLs to direct m3u8
-        if (url && url.includes('albaplayer')) {
-            const resolved = await resolveAlbaPlayerUrl(url);
-            if (resolved !== url) url = resolved;
+        // For channels: pre-fetch all server sources
+        if (matchIdx < 0 && channel) {
+            if (!url && channel) {
+                const n = channel.toLowerCase().match(/max\s*(\d+)/i);
+                if (n) url = 'https://tops.poiy.online/albaplayer/max' + n[1] + '/';
+            }
+            if (url && url.includes('albaplayer')) {
+                const allSources = await fetchAlbaSources(url);
+                const firstM3u8 = allSources.m3u8 || allSources.embedUrl || '';
+                if (firstM3u8.includes('.m3u8')) url = firstM3u8;
+                matchData = { team1: title, channel, ...allSources };
+                matchIdx = 0;
+            }
+        } else {
+            if (!url && channel) {
+                const n = channel.toLowerCase().match(/max\s*(\d+)/i);
+                if (n) url = 'https://tops.poiy.online/albaplayer/max' + n[1] + '/';
+            }
+            // Resolve albaplayer URLs to direct m3u8
+            if (url && url.includes('albaplayer')) {
+                const resolved = await resolveAlbaPlayerUrl(url);
+                if (resolved !== url) url = resolved;
+            }
         }
         if (url && url.includes('.m3u8')) {
             video.style.display = 'block';
