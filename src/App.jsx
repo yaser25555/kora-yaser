@@ -180,10 +180,12 @@ export default function App() {
                 }
             });
 
-            // 3. Combine: channel first, then scraper matches
-            const activeSd = sd.filter(m => m.status !== 'finished');
+            // 3. Only show scraper matches if data is fresh (< 12h old) and has valid dates
+            const dataAge = streamsData.lastUpdated ? (Date.now() - new Date(streamsData.lastUpdated).getTime()) : Infinity;
+            const freshSd = dataAge < 12*3600000 ? sd : [];
+            const activeSd = freshSd.filter(m => m.status !== 'finished' && m.dateAst);
             const liveMatches = activeSd.filter(m => m.status === 'live');
-            const upcomingMatches = activeSd.filter(m => m.status === 'upcoming');
+            const upcomingMatches = activeSd.filter(m => m.status === 'upcoming').slice(0, 4);
             const displaySd = [chanEntry, ...liveMatches, ...upcomingMatches];
             setStreamsData(displaySd);
             renderStreams(displaySd);
