@@ -124,6 +124,13 @@ export default function App() {
             // 1. Always fetch live channel sources (beIN MAX 1)
             const channelUrl = 'https://tops.poiy.online/albaplayer/max1/';
             const chanSources = await fetchAlbaSources(channelUrl);
+            // If no sources extracted, use known working fallback
+            if (!chanSources.m3u8 && !chanSources.embedUrl && !chanSources.m3u82) {
+                chanSources.embedUrl = 'https://live.kooraa2.cfd/rooma1.m3u8';
+                chanSources.embedUrl2 = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
+                chanSources.m3u8 = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
+                chanSources.embedUrl3 = 'https://s3.us-east-1.amazonaws.com/cdnh119/hls/0/stream.m3u8';
+            }
             const chanEntry = {
                 id: 'ch_max1', team1: 'قناة كأس العالم', team2: '',
                 channel: 'beIN SPORT MAX 1',
@@ -220,6 +227,11 @@ export default function App() {
             // Fallback: show channel even if scraper fails
             try {
                 const chanSources = await fetchAlbaSources('https://tops.poiy.online/albaplayer/max1/');
+                if (!chanSources.m3u8 && !chanSources.embedUrl) {
+                    chanSources.embedUrl = 'https://live.kooraa2.cfd/rooma1.m3u8';
+                    chanSources.embedUrl2 = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
+                    chanSources.m3u8 = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
+                }
                 const chanEntry = {
                     id: 'ch_max1', team1: 'قناة كأس العالم', team2: '',
                     channel: 'beIN SPORT MAX 1', status: 'live', time: 'مباشر الآن',
@@ -522,6 +534,10 @@ export default function App() {
                 matchData = { team1: title, team2: '', channel: channelName, ...allSources };
                 matchIdx = 0;
             }
+            // Fallback: use known working CDN if extraction failed
+            if (!url || !url.includes('.m3u8')) {
+                url = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
+            }
         } else {
             if (!url && channelName) {
                 const n = channelName.toLowerCase().match(/max\s*(\d+)/i);
@@ -530,6 +546,10 @@ export default function App() {
             if (url && url.includes('albaplayer')) {
                 const resolved = await resolveAlbaPlayerUrl(url);
                 if (resolved !== url) url = resolved;
+            }
+            // Fallback for non-channel streams too
+            if (!url || !url.includes('.m3u8')) {
+                url = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
             }
         }
         if (url && url.includes('.m3u8')) {
