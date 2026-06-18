@@ -400,8 +400,12 @@ export async function resolveAlbaPlayerUrl(url) {
 // Fetch albaplayer page and extract all stream sources
 function extractFromHtml(html, skipIframes, result) {
     // Clappr player: source:"URL"
-    const clappr = html.match(/source\s*:\s*["']([^"']+\.m3u8[^"']*)["']/);
-    if (clappr && !result.embedUrl) result.embedUrl = clappr[1];
+    const clapprRe = /source\s*:\s*["']([^"']+\.m3u8[^"']*)["']/g;
+    let cm; const clKeys = ['embedUrl','embedUrl2','embedUrl3'];
+    while ((cm = clapprRe.exec(html)) !== null) {
+        const slot = clKeys.find(k => !result[k]);
+        if (slot) result[slot] = cm[1];
+    }
 
     // AlbaPlayerControl('base64','hls') — decode base64
     const b64Re = /AlbaPlayerControl\s*\(\s*['"]([A-Za-z0-9+/=]+)['"]/g;
@@ -417,8 +421,12 @@ function extractFromHtml(html, skipIframes, result) {
     }
 
     // Bitmovin: source = {'hls':'URL'}
-    const bit = html.match(/['"]hls['"]\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
-    if (bit && !result.embedUrl) result.embedUrl = bit[1];
+    const bitRe = /['"]hls['"]\s*:\s*['"]([^"']+\.m3u8[^"']*)['"]/gi;
+    let btm; const bKeys = ['embedUrl','embedUrl2','embedUrl3','embedUrl4','embedUrl5'];
+    while ((btm = bitRe.exec(html)) !== null) {
+        const slot = bKeys.find(k => !result[k]);
+        if (slot) result[slot] = btm[1];
+    }
 
     // iframes (unless skipIframes)
     if (!skipIframes) {
