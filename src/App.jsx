@@ -8,7 +8,7 @@ import {
     renderStandingsHtml, renderStandingsCards, srcBtnHtml,
     getTheme, setTheme, toggleThemeValue, shareMatchData,
     TEAM_NAMES, STADIUM_NAMES, TZ_LIST, GROUPS, GROUP_NAMES,
-    setAllMatches, getAllMatches, resolveAlbaPlayerUrl
+    setAllMatches, getAllMatches, resolveAlbaPlayerUrl, fetchAlbaSources
 } from './utils.js';
 import { signInWithGoogle, signOutUser, onAuthChange } from './firebase.js';
 
@@ -55,6 +55,17 @@ export default function App() {
         const cls = ['','alt-source','alt-source','alt-source','alt-source','m3u8-source','m3u8-source','m3u8-source'];
         const styl = ['','background:linear-gradient(135deg,#1976D2,#1565C0)','background:linear-gradient(135deg,#388E3C,#2E7D32)','background:linear-gradient(135deg,#7B1FA2,#6A1B9A)','background:linear-gradient(135deg,#E65100,#BF360C)','','background:linear-gradient(135deg,#00695C,#004D40)!important','background:linear-gradient(135deg,#4E342E,#3E2723)!important'];
         const renderCard = (m, idx) => {
+            if (m.isChannel) {
+                const hasSrc = srcKeys.some(k => m[k]);
+                let c = `<div class="stream-card live" style="border-top-color:#FFD700;border-width:3px;"><div style="display:flex;align-items:center;gap:12px;width:100%;flex-wrap:wrap;"><img src="${m.logo1||''}" alt="" style="width:50px;height:50px;border-radius:10px;object-fit:contain;" onerror="this.style.display='none'"><div style="flex:1;min-width:120px;"><div style="font-weight:800;font-size:18px;">🏆 ${m.team1}</div><div style="color:#4CAF50;font-size:14px;font-weight:600;">🔴 بث مباشر</div></div>${m.time?`<div style="color:#90a4ae;font-size:13px;">${m.time}</div>`:''}</div>`;
+                if (hasSrc) {
+                    c += `<div class="source-btns" style="width:100%;justify-content:center;margin-top:8px;">`;
+                    srcKeys.forEach((k, i) => { if (m[k]) c += srcBtnHtml(idx, btnKeys[i], labels[i], cls[i], styl[i], sd); });
+                    c += `</div>`;
+                }
+                c += `</div>`;
+                return c;
+            }
             const st = m.status === 'live' ? 'ongoing' : m.status === 'finished' ? 'finished' : 'upcoming';
             const sm = { live:'⚡ مباشر', coming:'⏳ بعد قليل', upcoming:'🔜 قادمة' };
             const sc = (m.score1!=null && m.score2!=null) ? `${m.score1} - ${m.score2}` : '';
@@ -66,16 +77,24 @@ export default function App() {
             return c;
         };
         let html = '';
-        const hasLive = sd.some(m => m.status === 'live');
+        // Channel card (always first)
+        const chanCard = sd.find(m => m.isChannel);
+        if (chanCard) {
+            const idx = sd.indexOf(chanCard);
+            html += `<div class="group-section"><div class="group-header open"><span>📡 البث المباشر</span></div><div class="group-body open"><div class="stream-grid">${renderCard(chanCard, idx)}</div></div></div>`;
+        }
+        // Scraper matches
+        const matchSd = sd.filter(m => !m.isChannel);
+        const hasLive = matchSd.some(m => m.status === 'live');
+        const hasUpcoming = matchSd.some(m => m.status !== 'live');
         if (hasLive) {
-            html += `<div class="group-section"><div class="group-header open" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')"><span>🔴 مباشر الآن</span><span class="count">${sd.filter(m=>m.status==='live').length} مباراة</span><span class="toggle-icon">▶</span></div><div class="group-body open"><div class="stream-grid">`;
-            sd.forEach((m, idx) => { if (m.status === 'live') html += renderCard(m, idx); });
+            html += `<div class="group-section"><div class="group-header open" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')"><span>🔴 مباشر الآن</span><span class="count">${matchSd.filter(m=>m.status==='live').length} مباراة</span><span class="toggle-icon">▶</span></div><div class="group-body open"><div class="stream-grid">`;
+            matchSd.forEach((m, idx) => { if (m.status === 'live') html += renderCard(m, idx); });
             html += `</div></div></div>`;
         }
-        const hasUpcoming = sd.some(m => m.status !== 'live');
         if (hasUpcoming) {
-            html += `<div class="group-section"><div class="group-header" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')"><span>⏳ المباريات القادمة</span><span class="count">${sd.filter(m=>m.status!=='live').length} مباراة</span><span class="toggle-icon">▶</span></div><div class="group-body"><div class="stream-grid">`;
-            sd.forEach((m, idx) => { if (m.status !== 'live') html += renderCard(m, idx); });
+            html += `<div class="group-section"><div class="group-header" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')"><span>⏳ المباريات القادمة</span><span class="count">${matchSd.filter(m=>m.status!=='live').length} مباراة</span><span class="toggle-icon">▶</span></div><div class="group-body"><div class="stream-grid">`;
+            matchSd.forEach((m, idx) => { if (m.status !== 'live') html += renderCard(m, idx); });
             html += `</div></div></div>`;
         }
         html += `<div style="text-align:center;color:#555;font-size:clamp(10px,0.8vw,13px);margin-top:10px;">إذا كانت بعض الروابط لا تعمل أعد المحاولة بعد استخدام VPN</div>`;
@@ -102,15 +121,28 @@ export default function App() {
     const loadStreams = useCallback(async () => {
         renderContent(`<div class="loading"><div class="spinner"></div><div>جارٍ تحميل روابط المشاهدة...</div></div>`);
         try {
+            // 1. Always fetch live channel sources (beIN MAX 1)
+            const channelUrl = 'https://tops.poiy.online/albaplayer/max1/';
+            const chanSources = await fetchAlbaSources(channelUrl);
+            const chanEntry = {
+                id: 'ch_max1', team1: 'beIN SPORT MAX 1', team2: '',
+                channel: 'beIN SPORT MAX 1',
+                status: 'live', time: 'مباشر الآن',
+                logo1: 'https://www.bein.com/wp-content/uploads/2017/09/Bein-Sport-Max-1-logo.jpg',
+                url: channelUrl,
+                ...chanSources,
+                isChannel: true
+            };
+
+            // 2. Fetch scraper data + schedule
             const [streamsRes, scheduleRes] = await Promise.all([
                 fetch('./streams.json?t=' + Date.now()),
                 fetch('./matches.json?t=' + Date.now())
             ]);
-            if (!streamsRes.ok) throw new Error('HTTP ' + streamsRes.status);
-            const streamsData = await streamsRes.json();
+            const streamsData = streamsRes.ok ? await streamsRes.json() : { matches: [] };
             const schedule = scheduleRes.ok ? (await scheduleRes.json()).matches : [];
 
-            // Build schedule lookup by English names for better display names
+            // Build schedule lookup by English names
             const schedMap = {};
             schedule.forEach(sm => {
                 const k = (sm.team1En||'') + '_' + (sm.team2En||'');
@@ -119,9 +151,9 @@ export default function App() {
                 schedMap[r.toLowerCase().replace(/\s+/g,'')] = sm;
             });
 
-            // Time heuristic: mark stale "live" matches as finished (125+ min ago)
-            const sd = streamsData.matches;
+            // Mark stale matches as finished
             const now = new Date();
+            const sd = streamsData.matches || [];
             sd.forEach(m => {
                 if (m.status === 'live' && m.time) {
                     try {
@@ -130,7 +162,6 @@ export default function App() {
                         if ((now - matchT) > 125*60000) m.status = 'finished';
                     } catch(e) {}
                 }
-                // Cross-reference for better display names (never filter out)
                 const sKey = ((m.team1||'') + '_' + (m.team2||'')).replace(/\s+/g,'').toLowerCase();
                 const schedEntry = schedMap[sKey];
                 if (schedEntry) {
@@ -139,7 +170,6 @@ export default function App() {
                     if (!m.team1En) m.team1En = schedEntry.team1En;
                     if (!m.team2En) m.team2En = schedEntry.team2En;
                 }
-                // Fallback: match by time if team names fail
                 if (!m.team1En && m.time) {
                     const candidates = schedule.filter(sm => sm.timeAst === m.time);
                     if (candidates.length === 1) {
@@ -150,16 +180,33 @@ export default function App() {
                 }
             });
 
+            // 3. Combine: channel first, then scraper matches
             const activeSd = sd.filter(m => m.status !== 'finished');
             const liveMatches = activeSd.filter(m => m.status === 'live');
             const upcomingMatches = activeSd.filter(m => m.status === 'upcoming');
-            const displaySd = [...liveMatches, ...upcomingMatches];
+            const displaySd = [chanEntry, ...liveMatches, ...upcomingMatches];
             setStreamsData(displaySd);
             renderStreams(displaySd);
             const info = document.getElementById('updateInfo');
-            if (info) info.innerHTML = `<span>📺 آخر تحديث للروابط: ${new Date(streamsData.lastUpdated).toLocaleString('ar-SA')}</span>`;
+            if (streamsData.lastUpdated && info) {
+                info.innerHTML = `<span>📺 آخر تحديث للروابط: ${new Date(streamsData.lastUpdated).toLocaleString('ar-SA')}</span>`;
+            }
         } catch (err) {
-            renderContent(`<div class="error-msg">❌ فشل تحميل روابط المشاهدة: ${err.message}<br><button class="retry-btn" onclick="window.__retryStreams()">إعادة المحاولة</button></div>`);
+            // Fallback: show channel even if scraper fails
+            try {
+                const chanSources = await fetchAlbaSources('https://tops.poiy.online/albaplayer/max1/');
+                const chanEntry = {
+                    id: 'ch_max1', team1: 'beIN SPORT MAX 1', team2: '',
+                    channel: 'beIN SPORT MAX 1', status: 'live', time: 'مباشر الآن',
+                    logo1: 'https://www.bein.com/wp-content/uploads/2017/09/Bein-Sport-Max-1-logo.jpg',
+                    url: 'https://tops.poiy.online/albaplayer/max1/',
+                    ...chanSources, isChannel: true
+                };
+                renderStreams([chanEntry]);
+                setStreamsData([chanEntry]);
+            } catch(e2) {
+                renderContent(`<div class="error-msg">❌ فشل تحميل روابط المشاهدة: ${err.message}<br><button class="retry-btn" onclick="window.__retryStreams()">إعادة المحاولة</button></div>`);
+            }
         }
     }, [renderContent, renderStreams]);
 
