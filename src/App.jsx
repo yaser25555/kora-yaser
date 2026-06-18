@@ -180,13 +180,36 @@ export default function App() {
                 }
             });
 
-            // 3. Only show scraper matches if data is fresh (< 12h old) and has valid dates
+            // 3. Get upcoming matches from schedule (within 6h) with MAX 1 sources
+            const upcomingSched = [];
+            const nowSaudi = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Riyadh'}));
+            schedule.forEach(sm => {
+                if (sm.score1 !== null || !sm.dateAst || !sm.timeAst) return;
+                try {
+                    const md = new Date(sm.dateAst + 'T' + sm.timeAst + '+03:00');
+                    const diffMin = (md - nowSaudi) / 60000;
+                    if (diffMin > -30 && diffMin < 360) {
+                        upcomingSched.push({
+                            id: 'sched_' + sm.id,
+                            team1: sm.team1En, team2: sm.team2En,
+                            time: sm.timeAst, dateAst: sm.dateAst, timeAst: sm.timeAst,
+                            status: diffMin <= 0 ? 'live' : 'upcoming',
+                            channel: 'beIN SPORT MAX 1',
+                            logo1: '', logo2: '',
+                            ...chanSources,
+                            stadium: sm.stadium || '', group: sm.group || ''
+                        });
+                    }
+                } catch(e) {}
+            });
+
+            // 4. Only show scraper matches if data is fresh (< 12h old) and has valid dates
             const dataAge = streamsData.lastUpdated ? (Date.now() - new Date(streamsData.lastUpdated).getTime()) : Infinity;
             const freshSd = dataAge < 12*3600000 ? sd : [];
             const activeSd = freshSd.filter(m => m.status !== 'finished' && m.dateAst);
             const liveMatches = activeSd.filter(m => m.status === 'live');
             const upcomingMatches = activeSd.filter(m => m.status === 'upcoming').slice(0, 4);
-            const displaySd = [chanEntry, ...liveMatches, ...upcomingMatches];
+            const displaySd = [chanEntry, ...upcomingSched, ...liveMatches, ...upcomingMatches];
             setStreamsData(displaySd);
             renderStreams(displaySd);
             const info = document.getElementById('updateInfo');

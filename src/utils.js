@@ -198,7 +198,12 @@ export function getFlag(team) {
         'Switzerland':'🇨🇭','Senegal':'🇸🇳','Cameroon':'🇨🇲','Nigeria':'🇳🇬','Ghana':'🇬🇭',
         'Tunisia':'🇹🇳','Algeria':'🇩🇿','Egypt':'🇪🇬','Australia':'🇦🇺','Iran':'🇮🇷',
         'Ecuador':'🇪🇨','Canada':'🇨🇦','Poland':'🇵🇱','Serbia':'🇷🇸','Colombia':'🇨🇴',
-        'New Zealand':'🇳🇿','Iraq':'🇮🇶','Paraguay':'🇵🇾'
+        'New Zealand':'🇳🇿','Iraq':'🇮🇶','Paraguay':'🇵🇾',
+        'Uzbekistan':'🇺🇿','Czech Republic':'🇨🇿','South Africa':'🇿🇦',
+        'Bosnia & Herzegovina':'🇧🇦','Sweden':'🇸🇪','Turkey':'🇹🇷',
+        'Jordan':'🇯🇴','Norway':'🇳🇴','Austria':'🇦🇹','Qatar':'🇶🇦',
+        'Costa Rica':'🇨🇷','Panama':'🇵🇦','DR Congo':'🇨🇩',
+        'Ivory Coast':'🇨🇮','Haiti':'🇭🇹','Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿'
     };
     return map[team] || '🏳️';
 }
