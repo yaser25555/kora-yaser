@@ -80,3 +80,6 @@ dist/
 # OS
 Thumbs.db
 .DS_Store
+
+# Backup folder
+123456/
