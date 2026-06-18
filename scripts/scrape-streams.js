@@ -118,20 +118,19 @@ async function scrape() {
     });
   });
 
-  // Cross-reference with real WC schedule and filter out non-WC matches
+  // Keep all WC matches (cross-reference for extra data, but never filter out)
   const activeMatches = [];
   for (const m of matches) {
     if (!m.league.includes('كأس العالم') || m.status === 'finished') continue;
-    // Verify this is a real WC match by cross-referencing team names with matches.json
     const schedMatch = findScheduleMatch(m.team1, m.team2, m.league);
     if (schedMatch) {
       m.dateAst = schedMatch.dateAst;
       m.timeAst = schedMatch.timeAst;
-      activeMatches.push(m);
       console.log('  ✓ تأكيد: ' + m.team1 + ' vs ' + m.team2 + ' (' + m.dateAst + ' ' + m.timeAst + ')');
     } else {
-      console.log('  ✗ تخطي: ' + m.team1 + ' vs ' + m.team2 + ' (ليست مباراة كأس العالم مؤكدة)');
+      console.log('  ◇ تضمين: ' + m.team1 + ' vs ' + m.team2 + ' (بدون cross-reference، نحتفظ بها)');
     }
+    activeMatches.push(m);
   }
 
   // Extract embed URLs for active matches (up to 3 sources)
