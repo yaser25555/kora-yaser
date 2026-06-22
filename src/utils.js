@@ -375,7 +375,7 @@ export function shareMatchData(m) {
 
 // Resolve albaplayer pages to direct m3u8 URLs
 export async function resolveAlbaPlayerUrl(url) {
-    if (!url || !url.includes('albaplayer')) return url;
+    if (!url || !(url.includes('albaplayer') || url.includes('navigating-volatility') || url.includes('poiy.online'))) return url;
     try {
         const resp = await fetch(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now());
         if (!resp.ok) return url;
@@ -444,9 +444,28 @@ function extractFromHtml(html, skipIframes, result) {
     }
 }
 
+async function fetchIframeSources(html, baseUrl, result) {
+    const iframeRe = /<iframe[^>]+src\s*=\s*["']([^"']+)["']/gi;
+    let ifm;
+    while ((ifm = iframeRe.exec(html)) !== null) {
+        let src = ifm[1].trim();
+        if (!src || src.startsWith('#')) continue;
+        if (src.startsWith('/')) src = new URL(src, baseUrl).href;
+        if (src.includes('albaplayer')) {
+            try {
+                const r2 = await fetch(src + (src.includes('?') ? '&' : '?') + '_t=' + Date.now());
+                if (r2.ok) {
+                    const h2 = await r2.text();
+                    extractFromHtml(h2, false, result);
+                }
+            } catch(e) {}
+        }
+    }
+}
+
 export async function fetchAlbaSources(url) {
     const result = { embedUrl:'', embedUrl2:'', embedUrl3:'', embedUrl4:'', embedUrl5:'', m3u8:'', m3u82:'', m3u83:'' };
-    if (!url || !url.includes('albaplayer')) return result;
+    if (!url || !(url.includes('albaplayer') || url.includes('navigating-volatility') || url.includes('poiy.online'))) return result;
     try {
         const baseUrl = url.split('?')[0];
         const resp = await fetch(baseUrl + '?_t=' + Date.now());
@@ -454,6 +473,7 @@ export async function fetchAlbaSources(url) {
         const html = await resp.text();
 
         extractFromHtml(html, false, result);
+        await fetchIframeSources(html, baseUrl, result);
 
         // Parse server menu for additional servers
         const serverUrls = [];

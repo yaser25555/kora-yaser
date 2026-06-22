@@ -77,11 +77,12 @@ export default function App() {
             return c;
         };
         let html = '';
-        // Channel card (always first)
-        const chanCard = sd.find(m => m.isChannel);
-        if (chanCard) {
-            const idx = sd.indexOf(chanCard);
-            html += `<div class="group-section"><div class="group-header open"><span>📡 البث المباشر</span></div><div class="group-body open"><div class="stream-grid">${renderCard(chanCard, idx)}</div></div></div>`;
+        // Channel cards
+        const chanCards = sd.filter(m => m.isChannel);
+        if (chanCards.length) {
+            html += `<div class="group-section"><div class="group-header open"><span>📡 البث المباشر</span></div><div class="group-body open"><div class="stream-grid">`;
+            chanCards.forEach(c => html += renderCard(c, sd.indexOf(c)));
+            html += `</div></div></div>`;
         }
         // Scraper matches
         const matchSd = sd.filter(m => !m.isChannel);
@@ -121,25 +122,23 @@ export default function App() {
     const loadStreams = useCallback(async () => {
         renderContent(`<div class="loading"><div class="spinner"></div><div>جارٍ تحميل روابط المشاهدة...</div></div>`);
         try {
-            // 1. Always fetch live channel sources (beIN MAX 1)
-            const channelUrl = 'https://tops.poiy.online/albaplayer/max1/';
-            const chanSources = await fetchAlbaSources(channelUrl);
-            // If no sources extracted, use known working fallback
-            if (!chanSources.m3u8 && !chanSources.embedUrl && !chanSources.m3u82) {
-                chanSources.embedUrl = 'https://live.kooraa2.cfd/rooma1.m3u8';
-                chanSources.embedUrl2 = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
-                chanSources.m3u8 = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
-                chanSources.embedUrl3 = 'https://s3.us-east-1.amazonaws.com/cdnh119/hls/0/stream.m3u8';
-            }
+            // Sources extracted from https://new.poiy.online/navigating-volatility-strategies-for-successful-investing-in-the-2023-stock-market/ (verified working)
             const chanEntry = {
-                id: 'ch_max1', team1: 'قناة كأس العالم', team2: '',
-                channel: 'beIN SPORT MAX 1',
+                id: 'ch_bmax2', team1: 'قناة كأس العالم', team2: '',
+                channel: 'B Max 2',
                 status: 'live', time: 'مباشر الآن',
                 logo1: 'https://www.bein.com/wp-content/uploads/2017/09/Bein-Sport-Max-1-logo.jpg',
-                url: channelUrl,
-                ...chanSources,
+                embedUrl: 'https://ed.omener.xyz/qoozn2.m3u8',
+                embedUrl2: 'https://s3.us-east-2.amazonaws.com/cdnh121/live/stream/index.m3u8',
+                embedUrl3: 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8',
+                embedUrl4: 'https://d1211whpimeups.cloudfront.net/smil:rtbgo/chunklist_b2196000_slenG.m3u8',
+                embedUrl5: 'https://pub-f2987c4fc9d2450191dfee2ee8dc9f51.r2.dev/en/index.m3u8',
+                m3u8: 'https://ed.omener.xyz/qoozn2.m3u8',
+                m3u82: 'https://s3.us-east-2.amazonaws.com/cdnh121/live/stream/index.m3u8',
+                m3u83: 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8',
                 isChannel: true
             };
+            const chanSources = chanEntry;
 
             // 2. Fetch scraper data + schedule
             const [streamsRes, scheduleRes] = await Promise.all([
@@ -217,30 +216,29 @@ export default function App() {
             const liveMatches = activeSd.filter(m => m.status === 'live');
             const upcomingMatches = activeSd.filter(m => m.status === 'upcoming').slice(0, 4);
             const displaySd = [chanEntry, ...upcomingSched, ...liveMatches, ...upcomingMatches];
-            setStreamsData(displaySd);
-            renderStreams(displaySd);
+            // Keep only the first "قناة كأس العالم" entry, remove rest
+            let channelKept = false;
+            const filtered = displaySd.filter(m => {
+                if (m.team1 === 'قناة كأس العالم' && !m.team2) {
+                    if (channelKept) return false;
+                    channelKept = true;
+                }
+                return true;
+            });
+            setStreamsData(filtered);
+            renderStreams(filtered);
             const info = document.getElementById('updateInfo');
             if (streamsData.lastUpdated && info) {
                 info.innerHTML = `<span>📺 آخر تحديث للروابط: ${new Date(streamsData.lastUpdated).toLocaleString('ar-SA')}</span>`;
             }
         } catch (err) {
-            // Fallback: show channel even if scraper fails
+            // Fallback
             try {
-                const chanSources = await fetchAlbaSources('https://tops.poiy.online/albaplayer/max1/');
-                if (!chanSources.m3u8 && !chanSources.embedUrl) {
-                    chanSources.embedUrl = 'https://live.kooraa2.cfd/rooma1.m3u8';
-                    chanSources.embedUrl2 = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
-                    chanSources.m3u8 = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
-                }
-                const chanEntry = {
-                    id: 'ch_max1', team1: 'قناة كأس العالم', team2: '',
-                    channel: 'beIN SPORT MAX 1', status: 'live', time: 'مباشر الآن',
-                    logo1: 'https://www.bein.com/wp-content/uploads/2017/09/Bein-Sport-Max-1-logo.jpg',
-                    url: 'https://tops.poiy.online/albaplayer/max1/',
-                    ...chanSources, isChannel: true
-                };
-                renderStreams([chanEntry]);
-                setStreamsData([chanEntry]);
+                const fallbackChannels = [
+                    { id:'ch_bmax2', team1:'قناة كأس العالم', team2:'', channel:'B Max 2', logo1:'https://www.bein.com/wp-content/uploads/2017/09/Bein-Sport-Max-1-logo.jpg', embedUrl:'https://ed.omener.xyz/qoozn2.m3u8', embedUrl2:'https://s3.us-east-2.amazonaws.com/cdnh121/live/stream/index.m3u8', embedUrl3:'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8', embedUrl4:'https://d1211whpimeups.cloudfront.net/smil:rtbgo/chunklist_b2196000_slenG.m3u8', embedUrl5:'https://pub-f2987c4fc9d2450191dfee2ee8dc9f51.r2.dev/en/index.m3u8', m3u8:'https://ed.omener.xyz/qoozn2.m3u8', m3u82:'https://s3.us-east-2.amazonaws.com/cdnh121/live/stream/index.m3u8', m3u83:'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8', isChannel:true }
+                ];
+                renderStreams(fallbackChannels);
+                setStreamsData(fallbackChannels);
             } catch(e2) {
                 renderContent(`<div class="error-msg">❌ فشل تحميل روابط المشاهدة: ${err.message}<br><button class="retry-btn" onclick="window.__retryStreams()">إعادة المحاولة</button></div>`);
             }
@@ -525,31 +523,25 @@ export default function App() {
         if (isChannel) {
             if (!url && channelName) {
                 const n = channelName.toLowerCase().match(/max\s*(\d+)/i);
-                if (n) url = 'https://tops.poiy.online/albaplayer/max' + n[1] + '/';
+                if (n && n[1] === '1') url = 'https://new.poiy.online/navigating-volatility-strategies-for-successful-investing-in-the-2023-stock-market/';
+                else if (n) url = 'https://new.poiy.online/albaplayer/max' + n[1] + '/';
             }
-            if (url && url.includes('albaplayer')) {
+            if (url && (url.includes('albaplayer') || url.includes('poiy.online'))) {
                 const allSources = await fetchAlbaSources(url);
-                const firstM3u8 = allSources.m3u8 || allSources.embedUrl || allSources.m3u82 || allSources.embedUrl2 || allSources.m3u83 || allSources.embedUrl3 || '';
+                const firstM3u8 = allSources.m3u8 || allSources.embedUrl || allSources.m3u82 || allSources.embedUrl2 || allSources.m3u83 || '';
                 if (firstM3u8.includes('.m3u8')) url = firstM3u8;
                 matchData = { team1: title, team2: '', channel: channelName, ...allSources };
                 matchIdx = 0;
             }
-            // Fallback: use known working CDN if extraction failed
-            if (!url || !url.includes('.m3u8')) {
-                url = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
-            }
         } else {
             if (!url && channelName) {
                 const n = channelName.toLowerCase().match(/max\s*(\d+)/i);
-                if (n) url = 'https://tops.poiy.online/albaplayer/max' + n[1] + '/';
+                if (n && n[1] === '1') url = 'https://new.poiy.online/navigating-volatility-strategies-for-successful-investing-in-the-2023-stock-market/';
+                else if (n) url = 'https://new.poiy.online/albaplayer/max' + n[1] + '/';
             }
-            if (url && url.includes('albaplayer')) {
+            if (url && (url.includes('albaplayer') || url.includes('poiy.online'))) {
                 const resolved = await resolveAlbaPlayerUrl(url);
-                if (resolved !== url) url = resolved;
-            }
-            // Fallback for non-channel streams too
-            if (!url || !url.includes('.m3u8')) {
-                url = 'https://edge22.776740.ir.cdn.ir/hls2/sport.m3u8';
+                if (resolved !== url && resolved.includes('.m3u8')) url = resolved;
             }
         }
         if (url && url.includes('.m3u8')) {
@@ -629,7 +621,7 @@ export default function App() {
                 const source = btn.dataset.source;
                 const m = streamsData && streamsData[idx];
                 if (m) {
-                    const sm = {'1':'embedUrl','2':'embedUrl2','3':'embedUrl3','4':'embedUrl4','5':'embedUrl5','m3u8':'m3u8','m3u82':'m3u82','m3u83':'m3u83'};
+        const sm = {'1':'embedUrl','2':'embedUrl2','3':'embedUrl3','4':'embedUrl4','5':'embedUrl5','m3u8':'m3u8','m3u82':'m3u82','m3u83':'m3u83'};
                     const key = sm[source];
                     openStream((m.team1||'') + ' vs ' + (m.team2||''), (key && m[key]) || m.embedUrl || '', m.channel, idx, m).catch(() => {});
                 }
@@ -823,6 +815,22 @@ export default function App() {
                 }
             }
         };
+        window.__cycleSource = () => {
+            const { match } = currentStreamRef.current;
+            if (!match) return;
+            const order = ['1','2','3','4','5','m3u8','m3u82','m3u83'];
+            const sm = {'1':'embedUrl','2':'embedUrl2','3':'embedUrl3','4':'embedUrl4','5':'embedUrl5','m3u8':'m3u8','m3u82':'m3u82','m3u83':'m3u83'};
+            const active = document.querySelector('#modalSources .stream-btn[style*="opacity: 1"]');
+            let idx = active ? order.indexOf(active.__source) : -1;
+            for (let i = 1; i <= order.length; i++) {
+                const next = (idx + i) % order.length;
+                const key = sm[order[next]];
+                if (match[key]) {
+                    window.__switchSource(order[next]);
+                    return;
+                }
+            }
+        };
         window.__closeStream = () => { closeStream(); };
         window.__login = () => handleLogin();
         window.__logout = () => handleLogout();
@@ -834,7 +842,7 @@ export default function App() {
             const contents = parent.querySelectorAll('.group-sub-content');
             contents.forEach((c, i) => c.classList.toggle('active', (tab === 'standings' ? 0 : contents.length - 1) === i));
         };
-        return () => { ['__toggleFav','__setGroupFilter','__selectTz','__goToStream','__retryStreams','__retryData','__retryChannels','__switchSource','__shareLink','__toggleFullscreen','__closeStream','__switchGroupSubTab','__openChannel'].forEach(k => delete window[k]); };
+        return () => { ['__toggleFav','__setGroupFilter','__selectTz','__goToStream','__retryStreams','__retryData','__retryChannels','__switchSource','__shareLink','__toggleFullscreen','__cycleSource','__closeStream','__switchGroupSubTab','__openChannel'].forEach(k => delete window[k]); };
     }, [activeSection, switchSection, loadStreams, loadData, setTz, closeTzPicker, showToast, openStream]);
 
     // PWA Install
@@ -875,6 +883,17 @@ export default function App() {
                             <img src="/maradona.png" alt="دييغو مارادونا" className="maradona-img" />
                         </div>
                     </div>
+                </div>
+
+                <div className="app-banner">
+                    <img src="./logo.png" alt="YASER.TV" className="app-banner-icon" />
+                    <div className="app-banner-content">
+                        <div className="app-banner-title">📺 YASER.TV</div>
+                        <div className="app-banner-desc">تطبيق المشاهدة التلفزيونية المتكامل - حمّل التطبيق الآن واستمتع بمشاهدة القنوات والمباريات مباشرة</div>
+                    </div>
+                    <a href="https://www.mediafire.com/file/tticqf32ffgfwrf/TVYASER.apk/file" className="app-banner-download" target="_blank" rel="noopener noreferrer">
+                        ⬇️ تحميل التطبيق
+                    </a>
                 </div>
 
                 <div className="time-bar" id="timeBar">
@@ -949,10 +968,13 @@ export default function App() {
                     <div id="modalPlayerContainer" style={{position:'relative',background:'#000'}}>
                         <iframe className="modal-player" id="modalPlayer" allowFullScreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-popups allow-forms" style={{pointerEvents:'none'}}></iframe>
                         <video className="modal-player" id="modalVideo" style={{display:'none',pointerEvents:'none'}} preload="metadata" playsInline></video>
+                        <div style={{position:'absolute',top:'4px',zIndex:10,pointerEvents:'none',display:'flex',alignItems:'center',gap:'0',background:'rgba(0,0,0,0.7)',borderRadius:'6px',padding:'0 8px 0 0',boxShadow:'0 0 0 1px rgba(255,255,255,0.08)',height:'36px'}}>
+                            <button id="refreshBtn" onClick={() => { window.__cycleSource?.(); }} style={{background:'none',border:'none',color:'#fff',fontSize:'16px',cursor:'pointer',pointerEvents:'auto',padding:'0 6px 0 0',display:'flex',alignItems:'center',height:'100%',lineHeight:1,opacity:0.8}} title="تحديث البث">🔄</button>
+                            <div style={{display:'flex',alignItems:'center',gap:'4px',color:'#fff',fontSize:'15px',whiteSpace:'nowrap',height:'100%'}}>👁 {visitorCount ?? '...'}</div>
+                            <img src="./4.jpg" alt="YASEER-KOORA" style={{height:'100%',width:'auto',maxWidth:'clamp(100px,22vw,240px)',borderRadius:'0 4px 4px 0'}} />
+                        </div>
                         <div id="playerTouchBlock" style={{position:'absolute',top:0,left:0,right:0,bottom:0,zIndex:5,background:'transparent',pointerEvents:'auto'}}></div>
-                        <img src="./4.jpg" alt="YASEER-KOORA" className="player-logo" style={{position:'absolute',top:'4px',width:'clamp(160px,24vw,280px)',zIndex:10,pointerEvents:'none'}} />
-                        <div style={{position:'absolute',top:'12px',left:'12px',zIndex:12,background:'rgba(0,0,0,0.7)',borderRadius:'6px',padding:'4px 10px',color:'#fff',fontSize:'13px',pointerEvents:'none',display:'flex',alignItems:'center',gap:'6px'}}>👁 {visitorCount ?? '...'}</div>
-                        <button id="backToMenuBtn" onClick={() => { if (document.fullscreenElement||document.webkitFullscreenElement) { document.exitFullscreen?.()||document.webkitExitFullscreen?.(); setTimeout(window.__closeStream, 200); } else { window.__closeStream(); } }} style={{position:'absolute',bottom:'12px',left:'12px',zIndex:12,background:'rgba(0,0,0,0.6)',border:'1px solid rgba(255,255,255,0.2)',borderRadius:'6px',color:'white',padding:'8px 14px',fontSize:'14px',cursor:'pointer',pointerEvents:'auto',display:'flex',alignItems:'center',gap:'6px'}}>⌂ العودة</button>
+                        <button id="backToMenuBtn" onClick={() => { if (document.fullscreenElement||document.webkitFullscreenElement) { document.exitFullscreen?.()||document.webkitExitFullscreen?.(); setTimeout(window.__closeStream, 200); } else { window.__closeStream(); } }} style={{position:'absolute',bottom:'12px',left:'12px',zIndex:12,background:'none',border:'none',color:'white',padding:'8px 14px',fontSize:'14px',cursor:'pointer',pointerEvents:'auto',display:'flex',alignItems:'center',gap:'6px',textShadow:'0 1px 3px rgba(0,0,0,0.8)'}}>⌂ العودة</button>
                     </div>
                 </div>
             </div>
