@@ -37,6 +37,9 @@ function getStream(channelId, url) {
   const ff = spawn('ffmpeg', [
     '-fflags', 'nobuffer',
     '-flags', 'low_delay',
+    '-analyzeduration', '5000000',
+    '-probesize', '5000000',
+    '-f', 'mpegts',
     '-i', url,
     '-c', 'copy',
     '-f', 'hls',
@@ -46,6 +49,7 @@ function getStream(channelId, url) {
     '-hls_segment_filename', segPattern,
     playlistPath
   ], { stdio: ['ignore', 'ignore', 'pipe'] });
+  ff.stderr.on('data', d => process.stdout.write('[ffmpeg] ' + d.toString()));
 
   let buf = '';
   ff.stderr.on('data', d => {
