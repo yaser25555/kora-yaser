@@ -17,23 +17,29 @@ app.use((req, res, next) => {
 
 const streams = {};
 
-async function fetchAndPipe(url, writable) {
-  try {
-    const r = await fetch(url);
-    if (!r.ok) { writable.destroy(new Error('HTTP ' + r.status)); return; }
-    const reader = r.body.getReader();
-    const pump = async () => {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) { writable.end(); return; }
-        const ok = writable.write(value);
-        if (!ok) await new Promise(r => writable.once('drain', r));
+async function fetchAndPipe(url, writable, stopCheck) {
+  const connect = async () => {
+    while (true) {
+      if (stopCheck()) { try { writable.end(); } catch(e) {} return; }
+      try {
+        const r = await fetch(url);
+        if (stopCheck()) { try { writable.end(); } catch(e) {} return; }
+        if (!r.ok) { await new Promise(r => setTimeout(r, 3000)); continue; }
+        const reader = r.body.getReader();
+        while (true) {
+          if (stopCheck()) { reader.cancel(); try { writable.end(); } catch(e) {} return; }
+          const { done, value } = await reader.read();
+          if (done) break;
+          const ok = writable.write(value);
+          if (!ok) await new Promise(r => writable.once('drain', r));
+        }
+      } catch (e) {
+        console.error('fetchAndPipe error:', e.message);
       }
-    };
-    pump().catch(e => writable.destroy(e));
-  } catch (e) {
-    writable.destroy(e);
-  }
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  };
+  connect();
 }
 
 function getStream(channelId, url) {
@@ -44,6 +50,7 @@ function getStream(channelId, url) {
   }
   if (existing) {
     existing.process.kill('SIGKILL');
+    clearTimeout(existing.restartTimer);
     delete streams[channelId];
   }
   const outDir = path.join(HLS_DIR, channelId);
@@ -68,20 +75,32 @@ function getStream(channelId, url) {
     playlistPath
   ], { stdio: ['pipe', 'ignore', 'pipe'] });
 
-  fetchAndPipe(url, ff.stdin);
-
-  const streamObj = { url, process: ff, outDir, segPattern, playlistPath, lastAccess: Date.now(), buf: '' };
+  const streamObj = { url, process: ff, outDir, segPattern, playlistPath, lastAccess: Date.now(), buf: '', restartTimer: null };
   streams[channelId] = streamObj;
+
+  ff.stdin.on('error', () => {}); // ignore EPIPE after kill
+  fetchAndPipe(url, ff.stdin, () => streams[channelId] !== streamObj);
 
   ff.stderr.on('data', d => {
     streamObj.buf += d.toString();
     if (streamObj.buf.length > 10000) streamObj.buf = streamObj.buf.slice(-5000);
   });
+
+  const restart = () => {
+    if (streams[channelId] !== streamObj) return;
+    streamObj.restartTimer = setTimeout(() => {
+      console.log(`Restarting FFmpeg for ${channelId}`);
+      getStream(channelId, url);
+    }, 2000);
+  };
+
   ff.on('exit', (code) => {
-    if (streams[channelId] === streamObj) delete streams[channelId];
+    console.log(`FFmpeg ${channelId} exited with code ${code}`);
+    restart();
   });
-  ff.on('error', () => {
-    if (streams[channelId] === streamObj) delete streams[channelId];
+  ff.on('error', (err) => {
+    console.error(`FFmpeg ${channelId} error:`, err.message);
+    restart();
   });
 
   return streamObj;
