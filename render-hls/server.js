@@ -17,6 +17,25 @@ app.use((req, res, next) => {
 
 const streams = {};
 
+async function fetchAndPipe(url, writable) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) { writable.destroy(new Error('HTTP ' + r.status)); return; }
+    const reader = r.body.getReader();
+    const pump = async () => {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) { writable.end(); return; }
+        const ok = writable.write(value);
+        if (!ok) await new Promise(r => writable.once('drain', r));
+      }
+    };
+    pump().catch(e => writable.destroy(e));
+  } catch (e) {
+    writable.destroy(e);
+  }
+}
+
 function getStream(channelId, url) {
   const existing = streams[channelId];
   if (existing && existing.url === url && existing.process.exitCode === null) {
@@ -39,8 +58,7 @@ function getStream(channelId, url) {
     '-flags', 'low_delay',
     '-analyzeduration', '5000000',
     '-probesize', '5000000',
-    '-f', 'mpegts',
-    '-i', url,
+    '-i', 'pipe:0',
     '-c', 'copy',
     '-f', 'hls',
     '-hls_time', '4',
@@ -48,18 +66,17 @@ function getStream(channelId, url) {
     '-hls_flags', 'delete_segments+split_by_time',
     '-hls_segment_filename', segPattern,
     playlistPath
-  ], { stdio: ['ignore', 'ignore', 'pipe'] });
-  ff.stderr.on('data', d => process.stdout.write('[ffmpeg] ' + d.toString()));
+  ], { stdio: ['pipe', 'ignore', 'pipe'] });
 
-  let buf = '';
-  ff.stderr.on('data', d => {
-    buf += d.toString();
-    if (buf.length > 10000) buf = buf.slice(-5000);
-  });
+  fetchAndPipe(url, ff.stdin);
 
-  const streamObj = { url, process: ff, outDir, segPattern, playlistPath, lastAccess: Date.now() };
+  const streamObj = { url, process: ff, outDir, segPattern, playlistPath, lastAccess: Date.now(), buf: '' };
   streams[channelId] = streamObj;
 
+  ff.stderr.on('data', d => {
+    streamObj.buf += d.toString();
+    if (streamObj.buf.length > 10000) streamObj.buf = streamObj.buf.slice(-5000);
+  });
   ff.on('exit', (code) => {
     if (streams[channelId] === streamObj) delete streams[channelId];
   });
@@ -90,7 +107,8 @@ app.get('/hls/:channelId', async (req, res) => {
   const exists = await waitForPlaylist(stream.playlistPath);
 
   if (!exists) {
-    return res.status(504).send('FFmpeg failed to produce playlist. Check stream URL.');
+    const stderr = stream.buf || 'no stderr captured';
+    return res.status(504).send('FFmpeg failed to produce playlist.\n' + stderr);
   }
 
   try {
